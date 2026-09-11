@@ -57,11 +57,14 @@ export default function ScannerScreen({ initialProfiles }: ScannerScreenProps) {
   const isVerifyingRef = useRef<boolean>(false);
 
   // 1. Process check-in token (from camera or manual code)
+  const [error, setError] = useState<{ message: string; details?: string } | null>(null);
+
   const handleTokenDetected = useCallback(
     async (rawText: string) => {
       if (isVerifyingRef.current) return;
       isVerifyingRef.current = true;
       setIsSubmitting(true);
+      setError(null);
 
       // Stop camera stream during verification
       if (streamRef.current) {
@@ -76,19 +79,49 @@ export default function ScannerScreen({ initialProfiles }: ScannerScreenProps) {
 
       try {
         const effectiveTeacherId = selectedTeacherId || FALLBACK_TEST_STAFF_ID;
+        const checkInPayload = {
+          teacher_id: effectiveTeacherId,
+          check_in_time: new Date().toISOString(),
+          status: 'present' as const,
+        };
 
         const res = await submitCheckInAction({
-          teacherId: effectiveTeacherId,
+          teacherId: checkInPayload.teacher_id,
           token: rawText,
         });
 
+        if (!res.success) {
+          let errMessage = 'Verification failed.';
+          let errDetails: string | undefined = undefined;
+
+          if (typeof res.error === 'object' && res.error !== null) {
+            errMessage = res.error.message || errMessage;
+            errDetails = res.error.details || res.details;
+          } else if (typeof res.error === 'string') {
+            errMessage = res.error;
+            errDetails = res.details;
+          }
+
+          const errorObj = { message: errMessage, details: errDetails };
+          setError(errorObj);
+          setResult(res);
+          return;
+        }
+
+        setError(null);
         setResult(res);
       } catch (err: unknown) {
-        const errorMsg = err instanceof Error ? err.message : 'Check-in failed.';
+        console.error('Check-in submission error caught:', err);
+        const errTyped = err as { message?: string; details?: string; hint?: string };
+        const errorObj = {
+          message: errTyped?.message || 'Check-in submission failed.',
+          details: errTyped?.details || errTyped?.hint || (typeof err === 'object' ? JSON.stringify(err) : String(err)),
+        };
+        setError(errorObj);
         setResult({
           success: false,
-          message: 'Error',
-          error: errorMsg,
+          error: errorObj,
+          details: errorObj.details,
         });
       } finally {
         setIsSubmitting(false);
@@ -322,13 +355,23 @@ export default function ScannerScreen({ initialProfiles }: ScannerScreenProps) {
               </select>
             </div>
 
-            {/* Rejection Alert */}
-            {result && !result.success && (
+            {/* Red Rejection Banner: Displays error.message and error.details directly */}
+            {error && (
               <div className="p-4 bg-rose-950/40 border border-rose-500/40 rounded-2xl text-xs text-rose-300 flex items-start gap-3 shadow-lg">
                 <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                <div>
+                <div className="flex-1 space-y-1.5 text-left">
                   <div className="font-bold text-rose-200">Check-In Rejected</div>
-                  <div className="mt-0.5 text-rose-300/90">{result.error || 'Verification failed.'}</div>
+                  {error.message && (
+                    <div className="text-rose-300 font-medium">
+                      {error.message}
+                    </div>
+                  )}
+                  {error.details && (
+                    <div className="mt-1 text-[11px] text-rose-400/90 font-mono bg-rose-950/60 p-2.5 rounded-xl border border-rose-500/20 break-all whitespace-pre-wrap">
+                      <span className="text-rose-400 text-[10px] block font-sans font-semibold uppercase mb-0.5">Details</span>
+                      {error.details}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

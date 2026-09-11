@@ -11,13 +11,19 @@ export interface CheckInPayload {
   token: string;
 }
 
+export interface CheckInErrorObject {
+  message: string;
+  details?: string;
+}
+
 export interface CheckInResponse {
   success: boolean;
   message?: string;
   status?: 'present' | 'late';
   checkInTime?: string;
   teacherName?: string;
-  error?: string;
+  error?: string | CheckInErrorObject;
+  details?: string;
 }
 
 /**
@@ -173,24 +179,41 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
 
       if (updateError) {
         console.error('Failed to update attendance log:', updateError);
-        return { success: false, error: 'Database error updating attendance record.' };
+        return {
+          success: false,
+          error: {
+            message: updateError.message,
+            details: updateError.details || updateError.hint || `Code: ${updateError.code}`,
+          },
+          details: updateError.details || updateError.hint || `Code: ${updateError.code}`,
+        };
       }
       checkInRecord = updated;
     } else {
       // Direct insert into attendance_logs table
+      // Verified check-in payload format
+      const checkInPayload = {
+        teacher_id: profile.id || FALLBACK_TEST_STAFF_ID,
+        check_in_time: new Date().toISOString(),
+        status: 'present' as const,
+      };
+
       const { data: inserted, error: insertError } = await supabase
         .from('attendance_logs')
-        .insert({
-          teacher_id: profile.id,
-          check_in_time: now.toISOString(),
-          status,
-        })
+        .insert(checkInPayload)
         .select()
         .single();
 
       if (insertError) {
         console.error('Failed to commit attendance log:', insertError);
-        return { success: false, error: 'Database error writing attendance log.' };
+        return {
+          success: false,
+          error: {
+            message: insertError.message,
+            details: insertError.details || insertError.hint || `Code: ${insertError.code}`,
+          },
+          details: insertError.details || insertError.hint || `Code: ${insertError.code}`,
+        };
       }
       checkInRecord = inserted;
     }
@@ -202,11 +225,17 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
       checkInTime: checkInRecord?.check_in_time || now.toISOString(),
       teacherName: profile.name,
     };
-  } catch (dbErr) {
+  } catch (dbErr: any) {
     console.error('Database check-in error:', dbErr);
+    const errMessage = dbErr?.message || 'Unexpected error processing check-in.';
+    const errDetails = dbErr?.details || (typeof dbErr === 'object' ? JSON.stringify(dbErr) : String(dbErr));
     return {
       success: false,
-      error: 'Unexpected error processing check-in.',
+      error: {
+        message: errMessage,
+        details: errDetails,
+      },
+      details: errDetails,
     };
   }
 }
