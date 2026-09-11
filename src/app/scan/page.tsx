@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Staff Check-In Scanner | Attendance Web App',
-  description: 'Mobile HTML5 QR scanner with GPS Geofencing verification for teacher check-ins.',
+  description: 'Mobile HTML5 QR scanner with anti-cheat TOTP verification for teacher check-ins.',
 };
 
 export default async function ScanPage() {

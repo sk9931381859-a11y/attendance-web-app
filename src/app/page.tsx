@@ -24,7 +24,7 @@ export default function HomePage() {
             Attendance Web App
           </h1>
           <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">
-            Mobile-first institutional check-in platform with dynamic TOTP anti-cheat, GPS geofencing, and real-time dashboard analytics.
+            Mobile-first institutional check-in platform with dynamic TOTP anti-cheat and real-time dashboard analytics.
           </p>
         </div>
 
@@ -48,7 +48,7 @@ export default function HomePage() {
                   Staff Check-In Scanner
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Point your mobile camera at the lobby kiosk screen &bull; Verifies GPS geofencing (&le; 100m)
+                  Point your mobile camera at the lobby kiosk screen for instant verification
                 </p>
               </div>
             </div>
@@ -116,7 +116,7 @@ export default function HomePage() {
         {/* Footer Meta */}
         <div className="mt-8 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-500" />
-          <span>Next.js 14 App Router &bull; PWA Enabled &bull; Supabase Geofencing &amp; Auth</span>
+          <span>Next.js 14 App Router &bull; PWA Enabled &bull; Supabase Auth &amp; Realtime</span>
         </div>
       </div>
     </main>
