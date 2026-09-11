@@ -46,24 +46,28 @@ export default function PrincipalDashboard({ initialData }: PrincipalDashboardPr
   useEffect(() => {
     setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
-    const supabase = createClient();
-    const channel = supabase
-      .channel('principal-attendance-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'attendance_logs' },
-        (payload) => {
-          console.log('Realtime change detected in attendance_logs:', payload);
-          refreshData();
-        }
-      )
-      .subscribe((status) => {
-        setIsRealtimeActive(status === 'SUBSCRIBED');
-      });
+    try {
+      const supabase = createClient();
+      const channel = supabase
+        .channel('principal-attendance-realtime')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'attendance_logs' },
+          (payload) => {
+            console.log('Realtime change detected in attendance_logs:', payload);
+            refreshData();
+          }
+        )
+        .subscribe((status) => {
+          setIsRealtimeActive(status === 'SUBSCRIBED');
+        });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } catch (err) {
+      console.warn('Realtime subscription unavailable:', err);
+    }
   }, [refreshData]);
 
   // Filter staff list
