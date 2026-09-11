@@ -26,3 +26,8 @@ export function calculateHaversineDistance(
 
   return R * c;
 }
+
+export const BUILDING_LATITUDE = 22.8046;
+export const BUILDING_LONGITUDE = 86.2029;
+export const ACCEPTABLE_RADIUS_METERS = 100;
+export const FALLBACK_TEST_STAFF_ID = '00000000-0000-0000-0000-000000000001';

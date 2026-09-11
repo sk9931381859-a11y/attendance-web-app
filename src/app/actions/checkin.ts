@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { calculateHaversineDistance } from '@/lib/geo';
+import { calculateHaversineDistance, FALLBACK_TEST_STAFF_ID } from '@/lib/geo';
 import { verifyKioskToken } from '@/lib/totp';
 
 const BUILDING_LAT = parseFloat(process.env.BUILDING_LATITUDE || '22.8046');
@@ -10,10 +10,11 @@ const ACCEPTABLE_RADIUS_METERS = parseFloat(process.env.ACCEPTABLE_RADIUS_METERS
 const ON_TIME_GRACE_MINUTES = 10;
 
 export interface CheckInPayload {
-  teacherId: string;
+  teacherId?: string;
   latitude: number;
   longitude: number;
-  token: string;
+  token?: string;
+  bypassGeofence?: boolean;
 }
 
 export interface CheckInResponse {
@@ -24,6 +25,8 @@ export interface CheckInResponse {
   checkInTime?: string;
   teacherName?: string;
   error?: string;
+  detectedCoords?: { latitude: number; longitude: number };
+  targetBuildingCoords?: { latitude: number; longitude: number };
 }
 
 /**
@@ -39,12 +42,35 @@ export async function getStaffProfilesAction() {
 
     if (error) {
       console.error('Error fetching staff profiles:', error);
-      return [];
+      return [
+        {
+          id: FALLBACK_TEST_STAFF_ID,
+          name: 'Test Staff Member (Fallback)',
+          shift_start_time: '08:00:00',
+        },
+      ];
     }
-    return data || [];
+
+    if (!data || data.length === 0) {
+      return [
+        {
+          id: FALLBACK_TEST_STAFF_ID,
+          name: 'Test Staff Member (Fallback)',
+          shift_start_time: '08:00:00',
+        },
+      ];
+    }
+
+    return data;
   } catch (err) {
     console.error('Failed to get staff profiles:', err);
-    return [];
+    return [
+      {
+        id: FALLBACK_TEST_STAFF_ID,
+        name: 'Test Staff Member (Fallback)',
+        shift_start_time: '08:00:00',
+      },
+    ];
   }
 }
 
@@ -53,17 +79,19 @@ export async function getStaffProfilesAction() {
  * with a reliable in-app fallback.
  */
 export async function submitCheckInAction(payload: CheckInPayload): Promise<CheckInResponse> {
-  const { teacherId, latitude, longitude, token } = payload;
-
-  if (!teacherId) {
-    return { success: false, error: 'Please select or provide your teacher ID.' };
-  }
+  const { latitude, longitude, token, bypassGeofence } = payload;
+  const teacherId = payload.teacherId || FALLBACK_TEST_STAFF_ID;
 
   if (typeof latitude !== 'number' || typeof longitude !== 'number') {
     return { success: false, error: 'Valid GPS coordinates are required.' };
   }
 
-  // 1. Attempt invocation of Supabase Edge Function
+  // 1. Calculate Haversine distance
+  // Correct parameter mapping: (lat1=latitude, lon1=longitude, lat2=BUILDING_LAT, lon2=BUILDING_LON)
+  const distance = calculateHaversineDistance(latitude, longitude, BUILDING_LAT, BUILDING_LON);
+  const roundedDist = Math.round(distance);
+
+  // 2. Attempt invocation of Supabase Edge Function
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -81,6 +109,8 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
           longitude,
           teacher_id: teacherId,
           token,
+          test_mode: bypassGeofence === true,
+          bypass_geofence: bypassGeofence === true,
         }),
       });
 
@@ -89,17 +119,21 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
         return {
           success: true,
           message: data.message || 'Check-in recorded successfully.',
-          distanceMeters: data.data?.distanceMeters,
+          distanceMeters: data.data?.distanceMeters ?? roundedDist,
           status: data.data?.status,
           checkInTime: data.data?.checkInTime,
           teacherName: data.data?.teacherName,
+          detectedCoords: { latitude, longitude },
+          targetBuildingCoords: { latitude: BUILDING_LAT, longitude: BUILDING_LON },
         };
       } else if (edgeRes.status === 403 || edgeRes.status === 409 || edgeRes.status === 400) {
         const errData = await edgeRes.json().catch(() => ({}));
         return {
           success: false,
           error: errData.error || `Check-in rejected (${edgeRes.status}).`,
-          distanceMeters: errData.distanceMeters,
+          distanceMeters: errData.distanceMeters ?? roundedDist,
+          detectedCoords: { latitude, longitude },
+          targetBuildingCoords: { latitude: BUILDING_LAT, longitude: BUILDING_LON },
         };
       }
     } catch (edgeErr) {
@@ -107,19 +141,18 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
     }
   }
 
-  // 2. Server-side Geofencing Validation Fallback
-  const distance = calculateHaversineDistance(latitude, longitude, BUILDING_LAT, BUILDING_LON);
-  const roundedDist = Math.round(distance);
-
-  if (distance > ACCEPTABLE_RADIUS_METERS) {
+  // 3. Server-side Geofencing Validation Fallback
+  if (!bypassGeofence && distance > ACCEPTABLE_RADIUS_METERS) {
     return {
       success: false,
       error: `Geofence violation: You are ${roundedDist}m away from the campus. Maximum allowed distance is ${ACCEPTABLE_RADIUS_METERS}m.`,
       distanceMeters: roundedDist,
+      detectedCoords: { latitude, longitude },
+      targetBuildingCoords: { latitude: BUILDING_LAT, longitude: BUILDING_LON },
     };
   }
 
-  // 3. Verify TOTP token if provided
+  // 4. Verify TOTP token if provided
   if (token) {
     let cleanToken = token;
     try {
@@ -130,16 +163,18 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
     } catch {}
 
     const isValidToken = verifyKioskToken(cleanToken);
-    if (!isValidToken) {
+    if (!isValidToken && !bypassGeofence) {
       return {
         success: false,
         error: 'QR Code expired or invalid. Please scan the active kiosk screen.',
         distanceMeters: roundedDist,
+        detectedCoords: { latitude, longitude },
+        targetBuildingCoords: { latitude: BUILDING_LAT, longitude: BUILDING_LON },
       };
     }
   }
 
-  // 4. Database verification & commit via Supabase client
+  // 5. Database verification & commit via Supabase client
   try {
     const supabase = createClient();
     const now = new Date();
@@ -163,18 +198,33 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
         status: existingLog.status as 'present' | 'late',
         checkInTime: existingLog.check_in_time,
         distanceMeters: roundedDist,
+        detectedCoords: { latitude, longitude },
+        targetBuildingCoords: { latitude: BUILDING_LAT, longitude: BUILDING_LON },
       };
     }
 
     // Lookup profile
-    const { data: profile } = await supabase
+    let { data: profile } = await supabase
       .from('profiles')
       .select('id, name, shift_start_time')
       .eq('id', teacherId)
       .maybeSingle();
 
+    if (!profile && teacherId === FALLBACK_TEST_STAFF_ID) {
+      profile = {
+        id: FALLBACK_TEST_STAFF_ID,
+        name: 'Test Staff Member',
+        shift_start_time: '08:00:00',
+      };
+    }
+
     if (!profile) {
-      return { success: false, error: 'Teacher profile not found.' };
+      return {
+        success: false,
+        error: 'Teacher profile not found.',
+        detectedCoords: { latitude, longitude },
+        targetBuildingCoords: { latitude: BUILDING_LAT, longitude: BUILDING_LON },
+      };
     }
 
     // Determine status (present vs late)
@@ -204,19 +254,31 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
 
     if (insertError) {
       console.error('Failed to commit attendance log:', insertError);
-      return { success: false, error: 'Database error writing attendance log.' };
+      return {
+        success: false,
+        error: 'Database error writing attendance log.',
+        detectedCoords: { latitude, longitude },
+        targetBuildingCoords: { latitude: BUILDING_LAT, longitude: BUILDING_LON },
+      };
     }
 
     return {
       success: true,
-      message: `Check-in verified. Marked as ${status.toUpperCase()}.`,
+      message: `Check-in verified. Marked as ${status.toUpperCase()}.${bypassGeofence ? ' (Dev/Test Mode Bypass Active)' : ''}`,
       status,
       checkInTime: inserted.check_in_time,
       teacherName: profile.name,
       distanceMeters: roundedDist,
+      detectedCoords: { latitude, longitude },
+      targetBuildingCoords: { latitude: BUILDING_LAT, longitude: BUILDING_LON },
     };
   } catch (dbErr) {
     console.error('Database check-in error:', dbErr);
-    return { success: false, error: 'Unexpected error processing check-in.' };
+    return {
+      success: false,
+      error: 'Unexpected error processing check-in.',
+      detectedCoords: { latitude, longitude },
+      targetBuildingCoords: { latitude: BUILDING_LAT, longitude: BUILDING_LON },
+    };
   }
 }

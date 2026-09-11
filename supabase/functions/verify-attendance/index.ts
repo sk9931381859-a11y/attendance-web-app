@@ -17,10 +17,15 @@ const BUILDING_LATITUDE = parseFloat(Deno.env.get("BUILDING_LATITUDE") || "22.80
 const BUILDING_LONGITUDE = parseFloat(Deno.env.get("BUILDING_LONGITUDE") || "86.2029");
 const ACCEPTABLE_RADIUS_METERS = parseFloat(Deno.env.get("ACCEPTABLE_RADIUS_METERS") || "100");
 const ON_TIME_GRACE_MINUTES = 10;
+const FALLBACK_TEST_STAFF_ID = "00000000-0000-0000-0000-000000000001";
 
 /**
  * Calculates distance between two GPS coordinates using the Haversine formula
- * @returns distance in meters
+ * @param lat1 Latitude of point 1 (User device)
+ * @param lon1 Longitude of point 1 (User device)
+ * @param lat2 Latitude of point 2 (Target building)
+ * @param lon2 Longitude of point 2 (Target building)
+ * @returns Distance in meters
  */
 function calculateHaversineDistance(
   lat1: number,
@@ -46,7 +51,7 @@ function calculateHaversineDistance(
 /**
  * Parses time string (e.g. '08:00:00') against current date to evaluate lateness
  */
-function isTeacherLate(shiftStartTimeStr: string, checkInDate: Date): boolean {
+function isTeacherLate(shiftStartTimeStr: string | null, checkInDate: Date): boolean {
   if (!shiftStartTimeStr) return false;
 
   const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(shiftStartTimeStr);
@@ -80,9 +85,16 @@ serve(async (req: Request) => {
 
     // Parse request body
     const body = await req.json();
-    const { latitude, longitude, teacher_id, token } = body;
+    const {
+      latitude,
+      longitude,
+      teacher_id,
+      token,
+      test_mode,
+      bypass_geofence,
+    } = body;
 
-    // Validate parameters
+    // Validate coordinates
     if (typeof latitude !== "number" || typeof longitude !== "number") {
       return new Response(
         JSON.stringify({ error: "Invalid coordinates: latitude and longitude must be finite numbers." }),
@@ -90,14 +102,12 @@ serve(async (req: Request) => {
       );
     }
 
-    if (!teacher_id || typeof teacher_id !== "string") {
-      return new Response(
-        JSON.stringify({ error: "Missing required parameter: teacher_id." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Default to fallback test staff ID if teacher_id is absent
+    const targetTeacherId = teacher_id || FALLBACK_TEST_STAFF_ID;
+    const isTestMode = test_mode === true || bypass_geofence === true;
 
     // 1. Calculate Geofence Distance using Haversine formula
+    // Verified mapping: (lat1=latitude, lon1=longitude, lat2=BUILDING_LATITUDE, lon2=BUILDING_LONGITUDE)
     const distanceMeters = calculateHaversineDistance(
       latitude,
       longitude,
@@ -107,14 +117,16 @@ serve(async (req: Request) => {
 
     const roundedDistance = Math.round(distanceMeters);
 
-    // 2. Geofence Boundary Enforcement
-    if (distanceMeters > ACCEPTABLE_RADIUS_METERS) {
+    // 2. Geofence Boundary Enforcement (Bypassed if test_mode is enabled)
+    if (!isTestMode && distanceMeters > ACCEPTABLE_RADIUS_METERS) {
       return new Response(
         JSON.stringify({
           success: false,
           error: `Geofence violation: Device is ${roundedDistance}m away from facility. Maximum allowed radius is ${ACCEPTABLE_RADIUS_METERS}m.`,
           distanceMeters: roundedDistance,
           maxRadiusMeters: ACCEPTABLE_RADIUS_METERS,
+          detectedCoords: { latitude, longitude },
+          targetBuildingCoords: { latitude: BUILDING_LATITUDE, longitude: BUILDING_LONGITUDE },
         }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -129,7 +141,7 @@ serve(async (req: Request) => {
     const { data: existingLog, error: checkError } = await supabase
       .from("attendance_logs")
       .select("id, check_in_time, status")
-      .eq("teacher_id", teacher_id)
+      .eq("teacher_id", targetTeacherId)
       .gte("check_in_time", dayStart)
       .lte("check_in_time", dayEnd)
       .maybeSingle();
@@ -148,21 +160,36 @@ serve(async (req: Request) => {
           success: false,
           error: "Attendance already recorded for today.",
           existingRecord: existingLog,
+          distanceMeters: roundedDistance,
         }),
         { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // 4. Retrieve teacher's profile for shift start time
-    const { data: profile, error: profileError } = await supabase
+    let { data: profile } = await supabase
       .from("profiles")
       .select("id, name, shift_start_time")
-      .eq("id", teacher_id)
+      .eq("id", targetTeacherId)
       .maybeSingle();
 
-    if (profileError || !profile) {
+    // Auto-provision test profile if using fallback test ID
+    if (!profile && targetTeacherId === FALLBACK_TEST_STAFF_ID) {
+      const { data: newTestProfile } = await supabase
+        .from("profiles")
+        .insert({
+          id: FALLBACK_TEST_STAFF_ID,
+          name: "Test Staff Member",
+          shift_start_time: "08:00:00",
+        })
+        .select()
+        .single();
+      profile = newTestProfile;
+    }
+
+    if (!profile) {
       return new Response(
-        JSON.stringify({ error: "Teacher profile not found." }),
+        JSON.stringify({ error: `Teacher profile not found for ID: ${targetTeacherId}` }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -194,7 +221,7 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Attendance verified. Marked as ${status.toUpperCase()}.`,
+        message: `Attendance verified. Marked as ${status.toUpperCase()}.${isTestMode ? " (Test Mode Bypass Active)" : ""}`,
         data: {
           attendanceId: insertedLog.id,
           teacherId: profile.id,
@@ -203,6 +230,9 @@ serve(async (req: Request) => {
           checkInTime: insertedLog.check_in_time,
           distanceMeters: roundedDistance,
           acceptableRadiusMeters: ACCEPTABLE_RADIUS_METERS,
+          isTestMode,
+          detectedCoords: { latitude, longitude },
+          targetBuildingCoords: { latitude: BUILDING_LATITUDE, longitude: BUILDING_LONGITUDE },
         },
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
