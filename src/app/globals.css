@@ -3,8 +3,48 @@
 @tailwind utilities;
 
 :root {
-  --background: #0f172a;
-  --foreground: #f8fafc;
+  /* High-Contrast Modern Palette (from Dashboard) */
+  --background: #f9fafb; /* gray-50 */
+  --foreground: #111827; /* gray-900 */
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --border: #e5e7eb; /* gray-200 */
+  --border-subtle: #f3f4f6; /* gray-100 */
+
+  /* Brand Teal & Green Accents */
+  --brand-teal-50: #f0fdfa;
+  --brand-teal-200: #99f6e4;
+  --brand-teal-600: #0d9488;
+  --brand-teal-700: #0f766e;
+
+  --brand-green-50: #f0fdf4;
+  --brand-green-100: #dcfce7;
+  --brand-green-200: #bbf7d0;
+  --brand-green-400: #4ade80;
+  --brand-green-500: #22c55e;
+  --brand-green-600: #16a34a;
+  --brand-green-700: #15803d;
+  --brand-green-800: #166534;
+
+  /* Status Colors */
+  --status-present: #16a34a;
+  --status-late: #facc15;
+  --status-absent: #dc2626;
+  --status-pending: #4ade80;
+
+  /* Slate Gray Accents */
+  --slate-card-bg: rgba(148, 163, 184, 0.2); /* slate-400/20 */
+  --slate-card-border: rgba(203, 213, 225, 0.4); /* slate-300/40 */
+  --slate-muted-bg: #cbd5e1; /* slate-300 */
+  --slate-dark-text: #1e293b; /* slate-800 */
+
+  /* Component Border Radii & Shadow Depths */
+  --radius-card: 0.75rem; /* rounded-xl (12px) */
+  --radius-pill: 9999px; /* rounded-full */
+  --radius-button: 0.5rem; /* rounded-lg (8px) */
+
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  --shadow-dropdown: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
 }
 
 body {

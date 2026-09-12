@@ -1,8 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
-import { ShieldCheck, Clock, RefreshCw, Maximize2, Minimize2, Sparkles } from 'lucide-react';
+import {
+  Building2,
+  Clock,
+  RefreshCw,
+  Maximize2,
+  Minimize2,
+  ShieldCheck,
+  Sparkles,
+  Smartphone,
+  ExternalLink,
+} from 'lucide-react';
 import { getKioskTokenAction } from '@/app/actions/kiosk';
 import { TOTPResult } from '@/lib/totp';
 
@@ -41,10 +52,20 @@ export default function KioskScreen({ initialToken }: { initialToken?: TOTPResul
     const clockTimer = setInterval(() => {
       const now = new Date();
       setCurrentTime(
-        now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+        now.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true,
+        })
       );
       setCurrentDate(
-        now.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })
+        now.toLocaleDateString([], {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
       );
     }, 1000);
 
@@ -69,125 +90,165 @@ export default function KioskScreen({ initialToken }: { initialToken?: TOTPResul
   // Fullscreen toggle
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      document.documentElement
+        .requestFullscreen()
+        .then(() => setIsFullscreen(true))
+        .catch(() => {});
     } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+      document.exitFullscreen()
+        .then(() => setIsFullscreen(false))
+        .catch(() => {});
     }
   };
 
   const progressPercent = Math.max(0, Math.min(100, (secondsLeft / 30) * 100));
-  const circleRadius = 42;
+  const circleRadius = 40;
   const circumference = 2 * Math.PI * circleRadius;
   const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
 
-  const timerColor =
-    secondsLeft > 12 ? 'text-emerald-400 stroke-emerald-500' :
-    secondsLeft > 5 ? 'text-amber-400 stroke-amber-500' :
-    'text-rose-400 stroke-rose-500';
+  const timerStrokeColor =
+    secondsLeft > 10
+      ? 'stroke-teal-600'
+      : secondsLeft > 5
+      ? 'stroke-yellow-500'
+      : 'stroke-red-600';
 
   return (
-    <div className="relative min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 md:p-8 overflow-hidden font-sans select-none">
-      {/* Subtle Background Glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-72 h-72 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
-
-      {/* Top Header */}
-      <header className="relative z-10 flex items-center justify-between border-b border-slate-800/80 pb-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/10">
-            <ShieldCheck className="w-6 h-6" />
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col justify-between font-sans select-none">
+      {/* ========================================================================= */}
+      {/* 1. TOP NAVIGATION BAR (UNIFIED WITH DASHBOARD)                             */}
+      {/* ========================================================================= */}
+      <nav className="border-b bg-white px-6 py-3 flex items-center justify-between shadow-sm">
+        {/* Left: Brand Logo + Text + Tiny KIOSK Badge */}
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600">
+            <Building2 size={20} className="text-teal-600" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-              Attendance Kiosk
-              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Live 30s TOTP
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-gray-900 tracking-tight">
+                Attendance Hub
               </span>
-            </h1>
-            <p className="text-xs text-slate-400">Main Facility Lobby Screen</p>
-          </div>
-        </div>
-
-        {/* Live Clock & Fullscreen Control */}
-        <div className="flex items-center space-x-4">
-          <div className="text-right hidden sm:block">
-            <div className="text-lg font-mono font-semibold text-slate-100 tracking-wider flex items-center justify-end gap-1.5">
-              <Clock className="w-4 h-4 text-emerald-400" />
-              {currentTime || '--:--:--'}
+              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">
+                KIOSK
+              </span>
             </div>
-            <div className="text-xs text-slate-400">{currentDate || 'Loading date...'}</div>
-          </div>
-          <button
-            onClick={toggleFullscreen}
-            className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            title="Toggle Fullscreen"
-          >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          </button>
-        </div>
-      </header>
-
-      {/* Main Kiosk Center Card */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center py-6">
-        <div className="w-full max-w-md bg-slate-900/90 backdrop-blur-xl border border-slate-800/90 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/80 flex flex-col items-center text-center">
-          
-          {/* Instructions */}
-          <div className="mb-5">
-            <h2 className="text-lg font-semibold text-white tracking-tight flex items-center justify-center gap-2">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
-              Scan QR Code to Check In
-            </h2>
-            <p className="text-xs text-slate-400 mt-1 max-w-xs">
-              Open the teacher PWA scanner on your mobile phone to record your attendance.
+            <p className="text-[11px] text-gray-500 font-normal">
+              Facility Lobby Anti-Cheat Display
             </p>
           </div>
+        </div>
+
+        {/* Center: Navigation Links */}
+        <div className="hidden sm:flex items-center gap-2">
+          <Link
+            href="/dashboard"
+            className="text-gray-600 hover:text-gray-900 px-3.5 py-1.5 rounded-full text-xs font-semibold hover:bg-gray-100 transition"
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/scan"
+            className="text-gray-600 hover:text-gray-900 px-3.5 py-1.5 rounded-full text-xs font-semibold hover:bg-gray-100 transition flex items-center gap-1.5"
+          >
+            <Smartphone size={13} />
+            Mobile Scanner
+          </Link>
+        </div>
+
+        {/* Right: Live Clock & Fullscreen Toggle */}
+        <div className="flex items-center gap-4">
+          <div className="text-right hidden sm:block">
+            <div className="text-xs font-mono font-bold text-gray-900 flex items-center justify-end gap-1.5">
+              <Clock size={14} className="text-teal-600" />
+              {currentTime || '--:--:--'}
+            </div>
+            <div className="text-[10px] text-gray-500">{currentDate || 'Loading...'}</div>
+          </div>
+
+          <button
+            onClick={toggleFullscreen}
+            className="bg-black hover:bg-gray-800 text-white rounded-lg p-2 transition shadow-sm"
+            title="Toggle Fullscreen"
+          >
+            {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+          </button>
+        </div>
+      </nav>
+
+      {/* ========================================================================= */}
+      {/* 2. CENTRAL KIOSK CARD (HIGH-CONTRAST WHITE CARD)                          */}
+      {/* ========================================================================= */}
+      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 my-auto">
+        <div className="w-full max-w-md bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8 flex flex-col items-center text-center">
+          {/* Realtime Connected Badge */}
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200 mb-3">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            Realtime TOTP Active
+          </span>
+
+          {/* Heading */}
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center justify-center gap-2">
+            Scan to Check In
+          </h2>
+          <p className="text-xs text-gray-500 mt-1 max-w-xs">
+            Point your mobile camera at this QR code. The token dynamically rotates every 30 seconds.
+          </p>
 
           {/* QR Code Container */}
-          <div className="relative p-4 bg-white rounded-2xl shadow-xl shadow-emerald-950/30 group">
+          <div className="relative p-4 bg-gray-50 rounded-xl border border-gray-200 shadow-inner group my-5">
             {tokenData ? (
-              <div className={`transition-opacity duration-300 ${isRefreshing ? 'opacity-40' : 'opacity-100'}`}>
+              <div
+                className={`transition-opacity duration-300 ${
+                  isRefreshing ? 'opacity-30' : 'opacity-100'
+                }`}
+              >
                 <QRCodeSVG
                   value={tokenData.qrPayload}
-                  size={240}
+                  size={230}
                   level="H"
                   includeMargin={true}
-                  className="rounded-lg"
+                  className="rounded-lg bg-white p-2"
                 />
               </div>
             ) : (
-              <div className="w-[240px] h-[240px] flex items-center justify-center bg-slate-100 rounded-lg">
-                <RefreshCw className="w-8 h-8 text-slate-400 animate-spin" />
+              <div className="w-[230px] h-[230px] flex items-center justify-center bg-gray-100 rounded-lg">
+                <RefreshCw className="w-8 h-8 text-gray-400 animate-spin" />
               </div>
             )}
 
             {/* Refreshing Spinner Overlay */}
             {isRefreshing && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-[2px] rounded-2xl">
-                <RefreshCw className="w-8 h-8 text-emerald-600 animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-[2px] rounded-xl">
+                <RefreshCw className="w-8 h-8 text-teal-600 animate-spin" />
               </div>
             )}
           </div>
 
-          {/* Backup Human-Readable Code */}
-          <div className="mt-4 flex items-center gap-2">
-            <span className="text-xs uppercase tracking-wider text-slate-400 font-medium">One-Time Code:</span>
-            <span className="text-base font-mono font-bold tracking-widest text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-md border border-emerald-800/50">
-              {tokenData ? `${tokenData.token.slice(0, 3)} ${tokenData.token.slice(3)}` : '------'}
+          {/* Human-Readable Code (Matching Card 1 Slate Styling) */}
+          <div className="w-full bg-slate-400/20 text-slate-800 rounded-xl px-4 py-2.5 border border-slate-300/40 text-xs flex items-center justify-between">
+            <span className="font-semibold text-slate-700">One-Time Code:</span>
+            <span className="text-base font-mono font-bold tracking-widest text-teal-700 bg-white px-2.5 py-0.5 rounded-lg border border-gray-200 shadow-sm">
+              {tokenData
+                ? `${tokenData.token.slice(0, 3)} ${tokenData.token.slice(3)}`
+                : '------'}
             </span>
           </div>
 
-          {/* Circular Countdown Progress */}
+          {/* Countdown Ring */}
           <div className="mt-6 flex flex-col items-center">
-            <div className="relative w-24 h-24 flex items-center justify-center">
+            <div className="relative w-20 h-20 flex items-center justify-center">
               <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
                 {/* Background Ring */}
                 <circle
                   cx="50"
                   cy="50"
                   r={circleRadius}
-                  className="stroke-slate-800"
-                  strokeWidth="8"
+                  className="stroke-gray-200"
+                  strokeWidth="7"
                   fill="transparent"
                 />
                 {/* Progress Ring */}
@@ -195,44 +256,47 @@ export default function KioskScreen({ initialToken }: { initialToken?: TOTPResul
                   cx="50"
                   cy="50"
                   r={circleRadius}
-                  className={`${timerColor} transition-all duration-1000 ease-linear`}
-                  strokeWidth="8"
+                  className={`${timerStrokeColor} transition-all duration-1000 ease-linear`}
+                  strokeWidth="7"
                   strokeDasharray={circumference}
                   strokeDashoffset={strokeDashoffset}
                   strokeLinecap="round"
                   fill="transparent"
                 />
               </svg>
-              {/* Inner Countdown Number */}
+              {/* Inner Countdown */}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-mono font-bold text-white tracking-tight">
+                <span className="text-xl font-mono font-bold text-gray-900 tracking-tight">
                   {secondsLeft}
                 </span>
-                <span className="text-[10px] text-slate-400 uppercase tracking-wider">Sec</span>
+                <span className="text-[9px] text-gray-500 uppercase tracking-wider font-semibold">
+                  Sec
+                </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-2">
-              <span>Rotates every 30 seconds</span>
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
+              <span>Rotates every 30s</span>
               <button
                 onClick={refreshToken}
                 disabled={isRefreshing}
-                className="text-slate-400 hover:text-emerald-400 transition p-1"
-                title="Force refresh now"
+                className="text-gray-400 hover:text-teal-600 transition p-1"
+                title="Force refresh token"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw size={13} className={isRefreshing ? 'animate-spin' : ''} />
               </button>
             </div>
           </div>
-
         </div>
       </main>
 
-      {/* Footer Security Badge */}
-      <footer className="relative z-10 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 border-t border-slate-900 pt-4 gap-2">
+      {/* ========================================================================= */}
+      {/* 3. FOOTER                                                                 */}
+      {/* ========================================================================= */}
+      <footer className="border-t border-gray-200 bg-white px-6 py-3 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 gap-2 shadow-sm">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span>Anti-Cheat Protected: Screenshots expire in &le; 30 seconds</span>
+          <span className="w-2 h-2 rounded-full bg-green-500" />
+          <span>Anti-Cheat Protected: Time-based tokens expire strictly every 30 seconds.</span>
         </div>
         <div>
           <span>Attendance Web App &bull; Powered by Next.js 14 & Supabase</span>
