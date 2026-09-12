@@ -24,6 +24,7 @@ export interface CheckInResponse {
   teacherName?: string;
   error?: string | CheckInErrorObject;
   details?: string;
+  alreadyCheckedIn?: boolean;
 }
 
 /**
@@ -206,6 +207,23 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
 
       if (insertError) {
         console.error('Failed to commit attendance log:', insertError);
+
+        // Explicitly catch Postgres 23505 code (idx_unique_teacher_daily_attendance)
+        if (
+          insertError.code === '23505' ||
+          insertError.message?.includes('23505') ||
+          insertError.message?.includes('idx_unique_teacher_daily_attendance')
+        ) {
+          return {
+            success: true,
+            message: 'Already Checked In Today',
+            status: 'present',
+            checkInTime: now.toISOString(),
+            teacherName: profile.name,
+            alreadyCheckedIn: true,
+          };
+        }
+
         return {
           success: false,
           error: {

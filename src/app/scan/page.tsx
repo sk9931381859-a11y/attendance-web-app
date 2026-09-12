@@ -47,6 +47,7 @@ export default function ScanPage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [result, setResult] = useState<CheckInResponse | null>(null);
   const [error, setError] = useState<CheckInError | null>(null);
+  const [alreadyCheckedInNotice, setAlreadyCheckedInNotice] = useState<boolean>(false);
   const [manualCode, setManualCode] = useState<string>('');
   const [cameraError, setCameraError] = useState<string | null>(null);
 
@@ -117,6 +118,31 @@ export default function ScanPage() {
 
         if (insertError) {
           console.error('Direct database insert error:', insertError);
+
+          // Explicitly catch Postgres 23505 code (idx_unique_teacher_daily_attendance constraint)
+          const is23505 =
+            insertError.code === '23505' ||
+            String(insertError.code) === '23505' ||
+            insertError.message?.includes('23505') ||
+            insertError.message?.includes('idx_unique_teacher_daily_attendance') ||
+            insertError.details?.includes('23505') ||
+            insertError.details?.includes('idx_unique_teacher_daily_attendance');
+
+          if (is23505) {
+            const matchedProfile = profiles.find((p) => p.id === effectiveTeacherId);
+            setError(null);
+            setAlreadyCheckedInNotice(true);
+            setResult({
+              success: true,
+              message: 'Already Checked In Today',
+              status: 'present',
+              checkInTime: checkInPayload.check_in_time,
+              teacherName: matchedProfile?.name || 'Test Staff Member',
+              alreadyCheckedIn: true,
+            });
+            return;
+          }
+
           const errorObj: CheckInError = {
             message: insertError.message || 'Database error writing attendance log',
             details: insertError.details || insertError.hint || (insertError.code ? `Code: ${insertError.code}` : undefined),
@@ -132,6 +158,7 @@ export default function ScanPage() {
 
         const matchedProfile = profiles.find((p) => p.id === effectiveTeacherId);
         setError(null);
+        setAlreadyCheckedInNotice(false);
         setResult({
           success: true,
           message: 'Check-in recorded successfully. Marked as PRESENT.',
@@ -143,6 +170,32 @@ export default function ScanPage() {
         // Catch exact error object returned by Supabase or client execution
         console.error('Check-in submission error caught:', err);
         const errTyped = err as { message?: string; details?: string; hint?: string; code?: string };
+
+        // Explicitly catch Postgres 23505 code if thrown
+        const is23505 =
+          errTyped?.code === '23505' ||
+          String(errTyped?.code) === '23505' ||
+          errTyped?.message?.includes('23505') ||
+          errTyped?.message?.includes('idx_unique_teacher_daily_attendance') ||
+          errTyped?.details?.includes('23505') ||
+          errTyped?.details?.includes('idx_unique_teacher_daily_attendance');
+
+        if (is23505) {
+          const effectiveTeacherId = selectedTeacherId || FALLBACK_TEST_STAFF_ID;
+          const matchedProfile = profiles.find((p) => p.id === effectiveTeacherId);
+          setError(null);
+          setAlreadyCheckedInNotice(true);
+          setResult({
+            success: true,
+            message: 'Already Checked In Today',
+            status: 'present',
+            checkInTime: new Date().toISOString(),
+            teacherName: matchedProfile?.name || 'Test Staff Member',
+            alreadyCheckedIn: true,
+          });
+          return;
+        }
+
         const errorObj: CheckInError = {
           message: errTyped?.message || 'Check-in submission failed.',
           details: errTyped?.details || errTyped?.hint || (errTyped?.code ? `Code: ${errTyped.code}` : typeof err === 'object' ? JSON.stringify(err) : String(err)),
@@ -316,8 +369,14 @@ export default function ScanPage() {
             <div className="w-16 h-16 bg-emerald-500/20 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto text-emerald-400 mb-4 animate-bounce">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-1">Check-In Confirmed!</h2>
-            <p className="text-xs text-slate-400 mb-4">{result.message}</p>
+            <h2 className="text-2xl font-bold text-white mb-1">
+              {result.alreadyCheckedIn ? 'Already Checked In Today' : 'Check-In Confirmed!'}
+            </h2>
+            <p className="text-xs text-slate-400 mb-4">
+              {result.alreadyCheckedIn
+                ? 'Your attendance has already been logged for today.'
+                : result.message}
+            </p>
 
             <div className="bg-slate-950 rounded-2xl p-4 border border-slate-800 text-left space-y-2 mb-6">
               <div className="flex justify-between text-xs">
@@ -334,6 +393,12 @@ export default function ScanPage() {
                   {result.status}
                 </span>
               </div>
+              {result.alreadyCheckedIn && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Attendance State:</span>
+                  <span className="text-emerald-400 font-semibold">Already Checked In Today</span>
+                </div>
+              )}
               {result.checkInTime && (
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-400">Timestamp:</span>
@@ -359,6 +424,7 @@ export default function ScanPage() {
                 onClick={() => {
                   setResult(null);
                   setError(null);
+                  setAlreadyCheckedInNotice(false);
                 }}
                 className="w-full py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs rounded-xl transition"
               >
@@ -386,6 +452,19 @@ export default function ScanPage() {
                 ))}
               </select>
             </div>
+
+            {/* Green / Neutral Banner: Already Checked In Today (explicit 23505 state) */}
+            {alreadyCheckedInNotice && !error && (
+              <div className="p-4 bg-emerald-950/40 border border-emerald-500/40 rounded-2xl text-xs text-emerald-300 flex items-start gap-3 shadow-lg">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="flex-1 space-y-1 text-left">
+                  <div className="font-bold text-emerald-200 text-sm">Already Checked In Today</div>
+                  <p className="text-emerald-300/90 text-xs">
+                    Your attendance has already been logged for today with status PRESENT.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Red Rejection Banner: Displays error.message and error.details directly */}
             {error && (
