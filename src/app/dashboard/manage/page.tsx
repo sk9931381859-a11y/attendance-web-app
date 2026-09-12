@@ -1,17 +1,25 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { getStaffListAction } from '@/app/actions/staff';
+import { getStaffListAction, getAttendanceLogsAction } from '@/app/actions/staff';
 import StaffManagementScreen from '@/components/dashboard/StaffManagementScreen';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Staff Management | Principal Dashboard',
-  description: 'Manage teachers, schedule shift start times, and configure role-based access.',
+  title: 'Staff & Attendance Management | Principal Dashboard',
+  description: 'Register staff with Supabase Auth, manage working shifts, and audit historical attendance records.',
 };
 
 export default async function ManageStaffPage() {
-  const staffList = await getStaffListAction();
+  const [staffList, logsResult] = await Promise.all([
+    getStaffListAction(),
+    getAttendanceLogsAction(),
+  ]);
 
-  return <StaffManagementScreen initialStaff={staffList} />;
+  return (
+    <StaffManagementScreen
+      initialStaff={staffList}
+      initialLogs={logsResult.logs || []}
+    />
+  );
 }
