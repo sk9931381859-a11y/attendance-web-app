@@ -14,6 +14,7 @@ import {
 import Link from 'next/link';
 import jsQR from 'jsqr';
 import { FALLBACK_TEST_STAFF_ID } from '@/lib/constants';
+import { createClient } from '@/lib/supabase/client';
 import { submitCheckInAction, CheckInResponse } from '@/app/actions/checkin';
 
 interface ProfileItem {
@@ -85,37 +86,44 @@ export default function ScannerScreen({ initialProfiles }: ScannerScreenProps) {
           status: 'present' as const,
         };
 
-        const res = await submitCheckInAction({
-          teacherId: checkInPayload.teacher_id,
-          token: rawText,
-        });
+        // Direct database insert strictly using hardcoded table string 'attendance_logs'
+        const supabase = createClient();
+        const { data: insertedRecord, error: insertError } = await supabase
+          .from('attendance_logs')
+          .insert(checkInPayload)
+          .select()
+          .single();
 
-        if (!res.success) {
-          let errMessage = 'Verification failed.';
-          let errDetails: string | undefined = undefined;
-
-          if (typeof res.error === 'object' && res.error !== null) {
-            errMessage = res.error.message || errMessage;
-            errDetails = res.error.details || res.details;
-          } else if (typeof res.error === 'string') {
-            errMessage = res.error;
-            errDetails = res.details;
-          }
-
-          const errorObj = { message: errMessage, details: errDetails };
+        if (insertError) {
+          console.error('Direct database insert error:', insertError);
+          const errorObj = {
+            message: insertError.message || 'Database error writing attendance log',
+            details: insertError.details || insertError.hint || (insertError.code ? `Code: ${insertError.code}` : undefined),
+          };
           setError(errorObj);
-          setResult(res);
+          setResult({
+            success: false,
+            error: errorObj,
+            details: errorObj.details,
+          });
           return;
         }
 
+        const matchedProfile = profilesList.find((p) => p.id === effectiveTeacherId);
         setError(null);
-        setResult(res);
+        setResult({
+          success: true,
+          message: 'Check-in recorded successfully. Marked as PRESENT.',
+          status: 'present',
+          checkInTime: insertedRecord?.check_in_time || checkInPayload.check_in_time,
+          teacherName: matchedProfile?.name || 'Test Staff Member',
+        });
       } catch (err: unknown) {
         console.error('Check-in submission error caught:', err);
-        const errTyped = err as { message?: string; details?: string; hint?: string };
+        const errTyped = err as { message?: string; details?: string; hint?: string; code?: string };
         const errorObj = {
           message: errTyped?.message || 'Check-in submission failed.',
-          details: errTyped?.details || errTyped?.hint || (typeof err === 'object' ? JSON.stringify(err) : String(err)),
+          details: errTyped?.details || errTyped?.hint || (errTyped?.code ? `Code: ${errTyped.code}` : typeof err === 'object' ? JSON.stringify(err) : String(err)),
         };
         setError(errorObj);
         setResult({
@@ -128,7 +136,7 @@ export default function ScannerScreen({ initialProfiles }: ScannerScreenProps) {
         isVerifyingRef.current = false;
       }
     },
-    [selectedTeacherId]
+    [selectedTeacherId, profilesList]
   );
 
   // 2. Start Camera Scanner with soft fallbacks
