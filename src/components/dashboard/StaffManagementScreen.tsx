@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useState, useMemo, useTransition } from 'react';
+import React, { useState, useMemo, useTransition, useCallback } from 'react';
+import Link from 'next/link';
 import {
+  Building2,
+  BarChart2,
   Users,
   UserPlus,
   Clock,
@@ -9,32 +12,36 @@ import {
   Edit2,
   Trash2,
   ShieldCheck,
-  UserCheck,
   AlertTriangle,
+  AlertCircle,
   X,
   CheckCircle2,
   Calendar,
-  Sparkles,
-  History,
   DollarSign,
   Briefcase,
-  KeyRound,
-  Copy,
+  Mail,
   Check,
-  Filter,
   RefreshCw,
   FileSpreadsheet,
+  LogOut,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  User,
 } from 'lucide-react';
 import {
   StaffMember,
   AttendanceLogRecord,
-  registerStaffAction,
+  createStaffAction,
   updateStaffAction,
   deleteStaffAction,
+  getStaffListAction,
   getAttendanceLogsAction,
 } from '@/app/actions/staff';
+import { signOutAction } from '@/app/actions/auth';
 
 const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const SHIFT_PRESETS = ['07:30', '08:00', '08:30', '09:00'];
 
 interface StaffManagementScreenProps {
   initialStaff: StaffMember[];
@@ -45,49 +52,50 @@ export default function StaffManagementScreen({
   initialStaff,
   initialLogs,
 }: StaffManagementScreenProps) {
-  // Navigation Active Tab
-  const [activeTab, setActiveTab] = useState<'roster' | 'register' | 'logs'>('roster');
-
   // Staff State
   const [staffList, setStaffList] = useState<StaffMember[]>(initialStaff);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'staff' | 'admin'>('all');
-
-  // Modal / Edit States
-  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
-  const [deletingStaff, setDeletingStaff] = useState<StaffMember | null>(null);
-
-  // Edit Form State
-  const [editName, setEditName] = useState('');
-  const [editDesignation, setEditDesignation] = useState('');
-  const [editShift, setEditShift] = useState('08:00:00');
-  const [editRole, setEditRole] = useState<'staff' | 'admin'>('staff');
-  const [editSalary, setEditSalary] = useState('');
-  const [editWorkingDays, setEditWorkingDays] = useState<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
-  const [editError, setEditError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoggingOut, startLogout] = useTransition();
 
   // Registration Form State
   const [regName, setRegName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPassword, setRegPassword] = useState('');
   const [regDesignation, setRegDesignation] = useState('');
-  const [regShift, setRegShift] = useState('08:00:00');
+  const [regShift, setRegShift] = useState('08:00');
   const [regSalary, setRegSalary] = useState('');
-  const [regRole, setRegRole] = useState<'staff' | 'admin'>('staff');
   const [regWorkingDays, setRegWorkingDays] = useState<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+  const [regEmail, setRegEmail] = useState('');
+  const [regRole, setRegRole] = useState<'staff' | 'admin'>('staff');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [regError, setRegError] = useState<string | null>(null);
   const [regSuccess, setRegSuccess] = useState<{
     staff: StaffMember;
-    password?: string;
+    generatedPassword?: string;
   } | null>(null);
-  const [copiedPassword, setCopiedPassword] = useState(false);
 
-  // Attendance Logs State
+  // Edit Modal State
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDesignation, setEditDesignation] = useState('');
+  const [editShift, setEditShift] = useState('08:00');
+  const [editSalary, setEditSalary] = useState('');
+  const [editWorkingDays, setEditWorkingDays] = useState<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+  const [editEmail, setEditEmail] = useState('');
+  const [editRole, setEditRole] = useState<'staff' | 'admin'>('staff');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Delete Modal State
+  const [deletingStaff, setDeletingStaff] = useState<StaffMember | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Logs Section State (Collapsible)
+  const [showLogs, setShowLogs] = useState(false);
   const [logsList, setLogsList] = useState<AttendanceLogRecord[]>(initialLogs);
   const [logSearchQuery, setLogSearchQuery] = useState('');
   const [logStatusFilter, setLogStatusFilter] = useState<'all' | 'present' | 'late' | 'absent'>('all');
 
-  // Default date filter: 3 months ago until today
   const defaultStartDate = useMemo(() => {
     const d = new Date();
     d.setMonth(d.getMonth() - 3);
@@ -103,54 +111,28 @@ export default function StaffManagementScreen({
   const [isFilteringLogs, setIsFilteringLogs] = useState(false);
   const [logFilterMessage, setLogFilterMessage] = useState<string | null>(null);
 
-  // Global feedback message
-  const [globalMessage, setGlobalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const [isPending, startTransition] = useTransition();
-
-  // Helper: show feedback notification
-  const showFeedback = (type: 'success' | 'error', text: string) => {
-    setGlobalMessage({ type, text });
-    setTimeout(() => setGlobalMessage(null), 4000);
+  // Format shift time for display (e.g., '08:00:00' -> '08:00 AM')
+  const formatShiftTime = (timeStr?: string) => {
+    if (!timeStr) return '08:00 AM';
+    const parts = timeStr.split(':');
+    const hours = parseInt(parts[0], 10);
+    const minutes = parts[1] || '00';
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = hours % 12 || 12;
+    return `${String(formattedHours).padStart(2, '0')}:${minutes} ${ampm}`;
   };
 
-  // Filtered staff list for Roster tab
-  const filteredStaff = useMemo(() => {
-    return staffList.filter((s) => {
-      const matchesSearch =
-        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (s.designation && s.designation.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesRole = roleFilter === 'all' || s.role === roleFilter;
-      return matchesSearch && matchesRole;
-    });
-  }, [staffList, searchQuery, roleFilter]);
-
-  // Filtered attendance logs
-  const filteredLogs = useMemo(() => {
-    return logsList.filter((log) => {
-      const teacherName = log.profiles?.name || '';
-      const designation = log.profiles?.designation || '';
-      const matchesSearch =
-        teacherName.toLowerCase().includes(logSearchQuery.toLowerCase()) ||
-        designation.toLowerCase().includes(logSearchQuery.toLowerCase());
-      const matchesStatus = logStatusFilter === 'all' || log.status === logStatusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [logsList, logSearchQuery, logStatusFilter]);
-
-  // Log Summary Stats
-  const logStats = useMemo(() => {
-    let present = 0;
-    let late = 0;
-    let absent = 0;
-    logsList.forEach((l) => {
-      if (l.status === 'present') present++;
-      else if (l.status === 'late') late++;
-      else if (l.status === 'absent') absent++;
-    });
-    return { total: logsList.length, present, late, absent };
-  }, [logsList]);
+  // Format currency
+  const formatSalary = (amount?: number | null) => {
+    if (amount == null || isNaN(amount)) return '—';
+    return (
+      new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0,
+      }).format(amount) + '/mo'
+    );
+  };
 
   // Toggle working day checkbox
   const toggleWorkingDay = (
@@ -159,21 +141,98 @@ export default function StaffManagementScreen({
     setter: React.Dispatch<React.SetStateAction<string[]>>
   ) => {
     if (current.includes(day)) {
-      if (current.length === 1) return; // Must have at least 1 day
+      if (current.length === 1) return; // Keep at least one day
       setter(current.filter((d) => d !== day));
     } else {
       setter([...current, day]);
     }
   };
 
+  // Refresh Staff List
+  const handleRefreshStaff = async () => {
+    setIsRefreshing(true);
+    try {
+      const refreshed = await getStaffListAction();
+      setStaffList(refreshed);
+    } catch (err) {
+      console.error('Failed to refresh staff:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Sign out
+  const handleSignOut = () => {
+    startLogout(async () => {
+      await signOutAction();
+    });
+  };
+
+  // Handle Registration Form Submit
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegError(null);
+    setRegSuccess(null);
+
+    if (!regName.trim() || regName.trim().length < 2) {
+      setRegError('Please provide a valid staff name (minimum 2 characters).');
+      return;
+    }
+
+    if (regWorkingDays.length === 0) {
+      setRegError('Please select at least one scheduled working day.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await createStaffAction({
+        name: regName.trim(),
+        designation: regDesignation.trim() || null,
+        shift_start_time: regShift,
+        salary: regSalary ? Number(regSalary) : null,
+        working_days: regWorkingDays,
+        role: regRole,
+        email: regEmail.trim() || null,
+      });
+
+      if (!res.success || !res.staff) {
+        setRegError(res.error || 'Failed to insert staff profile into database.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Prepend or sort into list
+      setStaffList((prev) => [...prev, res.staff!].sort((a, b) => a.name.localeCompare(b.name)));
+      setRegSuccess({
+        staff: res.staff,
+        generatedPassword: res.generatedPassword,
+      });
+
+      // Reset form
+      setRegName('');
+      setRegDesignation('');
+      setRegShift('08:00');
+      setRegSalary('');
+      setRegEmail('');
+      setRegWorkingDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+    } catch (err: unknown) {
+      setRegError(err instanceof Error ? err.message : 'An unexpected error occurred.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Open Edit Modal
-  const handleOpenEditModal = (staff: StaffMember) => {
+  const openEditModal = (staff: StaffMember) => {
     setEditingStaff(staff);
     setEditName(staff.name);
     setEditDesignation(staff.designation || '');
-    setEditShift(staff.shift_start_time || '08:00:00');
-    setEditRole(staff.role);
+    const shift = staff.shift_start_time ? staff.shift_start_time.substring(0, 5) : '08:00';
+    setEditShift(shift);
     setEditSalary(staff.salary != null ? String(staff.salary) : '');
+    setEditRole(staff.role);
+    setEditEmail(staff.email || '');
     setEditWorkingDays(
       staff.working_days && staff.working_days.length > 0
         ? staff.working_days
@@ -183,7 +242,7 @@ export default function StaffManagementScreen({
   };
 
   // Submit Edit Staff
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingStaff) return;
 
@@ -192,20 +251,24 @@ export default function StaffManagementScreen({
       return;
     }
 
+    setIsUpdating(true);
     setEditError(null);
-    startTransition(async () => {
+
+    try {
       const res = await updateStaffAction({
         id: editingStaff.id,
         name: editName.trim(),
-        shift_start_time: editShift,
-        role: editRole,
         designation: editDesignation.trim() || null,
+        shift_start_time: editShift,
         salary: editSalary ? Number(editSalary) : null,
         working_days: editWorkingDays,
+        role: editRole,
+        email: editEmail.trim() || null,
       });
 
       if (!res.success || !res.staff) {
         setEditError(res.error || 'Failed to update staff member.');
+        setIsUpdating(false);
         return;
       }
 
@@ -215,90 +278,69 @@ export default function StaffManagementScreen({
           .sort((a, b) => a.name.localeCompare(b.name))
       );
       setEditingStaff(null);
-      showFeedback('success', `Updated profile for "${res.staff.name}".`);
-    });
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : 'Failed to update staff member.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Open Delete Modal
+  const openDeleteModal = (staff: StaffMember) => {
+    setDeletingStaff(staff);
   };
 
   // Confirm Delete Staff
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deletingStaff) return;
 
-    startTransition(async () => {
+    setIsDeleting(true);
+    try {
       const res = await deleteStaffAction(deletingStaff.id);
       if (!res.success) {
         alert(res.error || 'Failed to delete staff member.');
-        setDeletingStaff(null);
+        setIsDeleting(false);
         return;
       }
 
       setStaffList((prev) => prev.filter((s) => s.id !== deletingStaff.id));
-      showFeedback('success', `Staff member "${deletingStaff.name}" has been removed.`);
       setDeletingStaff(null);
-    });
-  };
-
-  // Submit Registration Form
-  const handleRegisterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setRegError(null);
-
-    if (!regName.trim() || regName.trim().length < 2) {
-      setRegError('Staff full name (minimum 2 characters) is required.');
-      return;
+    } catch (err) {
+      console.error('Failed to delete staff:', err);
+      alert('An error occurred while deleting staff member.');
+    } finally {
+      setIsDeleting(false);
     }
+  };
 
-    if (!regEmail.trim() || !regEmail.includes('@')) {
-      setRegError('A valid email address is required.');
-      return;
-    }
-
-    startTransition(async () => {
-      const res = await registerStaffAction({
-        name: regName.trim(),
-        email: regEmail.trim(),
-        password: regPassword.trim() || undefined,
-        designation: regDesignation.trim() || undefined,
-        shift_start_time: regShift,
-        salary: regSalary ? Number(regSalary) : undefined,
-        working_days: regWorkingDays,
-        role: regRole,
-      });
-
-      if (!res.success || !res.staff) {
-        setRegError(res.error || 'Failed to register staff account.');
-        return;
-      }
-
-      // Append new staff to list
-      setStaffList((prev) => [...prev, res.staff!].sort((a, b) => a.name.localeCompare(b.name)));
-
-      // Show success credentials card
-      setRegSuccess({
-        staff: res.staff,
-        password: res.generatedPassword || regPassword,
-      });
-
-      // Clear form
-      setRegName('');
-      setRegEmail('');
-      setRegPassword('');
-      setRegDesignation('');
-      setRegShift('08:00:00');
-      setRegSalary('');
-      setRegWorkingDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+  // Filter staff list
+  const filteredStaff = useMemo(() => {
+    return staffList.filter((s) => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch =
+        s.name.toLowerCase().includes(q) ||
+        (s.designation && s.designation.toLowerCase().includes(q)) ||
+        (s.email && s.email.toLowerCase().includes(q));
+      const matchesRole = roleFilter === 'all' || s.role === roleFilter;
+      return matchesSearch && matchesRole;
     });
-  };
+  }, [staffList, searchQuery, roleFilter]);
 
-  // Copy temporary credentials
-  const copyCredentials = () => {
-    if (!regSuccess) return;
-    const text = `Attendance App Account:\nEmail: ${regSuccess.staff.email}\nTemporary Password: ${regSuccess.password}`;
-    navigator.clipboard.writeText(text);
-    setCopiedPassword(true);
-    setTimeout(() => setCopiedPassword(false), 2500);
-  };
+  // Filter attendance logs
+  const filteredLogs = useMemo(() => {
+    return logsList.filter((log) => {
+      const teacherName = log.profiles?.name || '';
+      const designation = log.profiles?.designation || '';
+      const q = logSearchQuery.toLowerCase();
+      const matchesSearch =
+        teacherName.toLowerCase().includes(q) ||
+        designation.toLowerCase().includes(q);
+      const matchesStatus = logStatusFilter === 'all' || log.status === logStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [logsList, logSearchQuery, logStatusFilter]);
 
-  // Fetch Attendance Logs with Custom Date Range
+  // Filter Logs by Date
   const handleFilterLogs = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsFilteringLogs(true);
@@ -320,575 +362,334 @@ export default function StaffManagementScreen({
     setTimeout(() => setLogFilterMessage(null), 4000);
   };
 
-  // Reset to Default (3 months)
-  const handleResetLogRange = async () => {
-    setStartDate(defaultStartDate);
-    setEndDate(defaultEndDate);
-    setIsFilteringLogs(true);
-
-    const res = await getAttendanceLogsAction();
-    setIsFilteringLogs(false);
-
-    if (res.success) {
-      setLogsList(res.logs || []);
-      setLogFilterMessage('Reset range to standard 3-month window.');
-      setTimeout(() => setLogFilterMessage(null), 3500);
-    }
-  };
-
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-      {/* Top Banner / Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-6 mb-8">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Administrative Portal
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-            Staff & Attendance Hub
-            <span className="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono font-medium">
-              {staffList.length} Staff Members
-            </span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Provision staff credentials via Supabase Auth without session interruption, configure shift schedules, and audit historical attendance check-ins.
-          </p>
-        </div>
-
-        {/* Action button */}
+    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans pb-16">
+      {/* ========================================================================= */}
+      {/* 1. TOP NAVIGATION BAR                                                     */}
+      {/* ========================================================================= */}
+      <nav className="border-b bg-white px-6 py-3 flex items-center justify-between shadow-sm sticky top-0 z-30">
+        {/* Left: Brand Logo + Text + Tiny ADMIN Badge */}
         <div className="flex items-center gap-3">
-          {activeTab !== 'register' ? (
-            <button
-              onClick={() => setActiveTab('register')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20 transition active:scale-95"
-            >
-              <UserPlus className="w-4 h-4" />
-              Register New Staff
-            </button>
-          ) : (
-            <button
-              onClick={() => setActiveTab('roster')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition"
-            >
-              <Users className="w-4 h-4" />
-              View Staff Roster
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Global Toast / Feedback */}
-      {globalMessage && (
-        <div
-          className={`mb-6 p-4 rounded-2xl text-xs flex items-center gap-3 shadow-lg border transition ${
-            globalMessage.type === 'success'
-              ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
-              : 'bg-rose-950/50 border-rose-500/40 text-rose-300'
-          }`}
-        >
-          {globalMessage.type === 'success' ? (
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-          ) : (
-            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
-          )}
-          <span className="font-medium">{globalMessage.text}</span>
-        </div>
-      )}
-
-      {/* Modern Tab Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-800/80 mb-8 overflow-x-auto no-scrollbar">
-        <button
-          onClick={() => setActiveTab('roster')}
-          className={`flex items-center gap-2.5 px-4 py-3 text-xs font-semibold rounded-t-xl transition border-b-2 -mb-px whitespace-nowrap ${
-            activeTab === 'roster'
-              ? 'border-emerald-500 text-emerald-400 bg-slate-900/60'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/30'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          Staff Directory & Shifts
-          <span className="ml-1 text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">
-            {staffList.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => {
-            setActiveTab('register');
-            setRegSuccess(null);
-            setRegError(null);
-          }}
-          className={`flex items-center gap-2.5 px-4 py-3 text-xs font-semibold rounded-t-xl transition border-b-2 -mb-px whitespace-nowrap ${
-            activeTab === 'register'
-              ? 'border-emerald-500 text-emerald-400 bg-slate-900/60'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/30'
-          }`}
-        >
-          <UserPlus className="w-4 h-4" />
-          Register New Staff
-          <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-            Auth
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('logs')}
-          className={`flex items-center gap-2.5 px-4 py-3 text-xs font-semibold rounded-t-xl transition border-b-2 -mb-px whitespace-nowrap ${
-            activeTab === 'logs'
-              ? 'border-emerald-500 text-emerald-400 bg-slate-900/60'
-              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/30'
-          }`}
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          Attendance Log Viewer
-          <span className="ml-1 text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">
-            {logsList.length}
-          </span>
-        </button>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* TAB 1: STAFF DIRECTORY & ROSTER                                          */}
-      {/* ========================================================================= */}
-      {activeTab === 'roster' && (
-        <div className="space-y-6">
-          {/* Search & Role Filters */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
-            <div className="relative flex-1 w-full">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search teachers by name, email, or designation..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-              />
+          <div className="w-9 h-9 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600">
+            <Building2 size={20} className="text-teal-600" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-gray-900 tracking-tight">
+                Attendance Hub
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">
+                ADMIN
+              </span>
             </div>
+            <p className="text-[11px] text-gray-500 font-normal">
+              Principal Administration & Oversight
+            </p>
+          </div>
+        </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value as any)}
-                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500 w-full sm:w-auto"
-              >
-                <option value="all">All Roles</option>
-                <option value="staff">Staff Only</option>
-                <option value="admin">Administrators Only</option>
-              </select>
+        {/* Center: Pill Navigation Toggle */}
+        <div className="hidden md:flex items-center gap-1 bg-gray-100 p-1 rounded-full border border-gray-200">
+          <Link
+            href="/dashboard"
+            className="text-gray-600 hover:text-gray-900 px-4 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-2"
+          >
+            <BarChart2 size={16} />
+            Live Monitoring
+          </Link>
+          <button className="bg-black text-white rounded-full px-4 py-1.5 flex items-center gap-2 text-xs font-semibold shadow-sm">
+            <Users size={16} />
+            Staff Directory
+          </button>
+        </div>
+
+        {/* Right: User Info + Sign Out */}
+        <div className="flex items-center gap-4">
+          <div className="text-right hidden sm:block">
+            <div className="text-xs font-semibold text-gray-900">
+              School Principal (Admin)
+            </div>
+            <div className="text-[11px] text-gray-500 font-mono">
+              admin@attendance.app
             </div>
           </div>
 
-          {/* Staff Table */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950/70 border-b border-slate-800 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  <tr>
-                    <th className="py-3.5 px-4 sm:px-6">Staff Member</th>
-                    <th className="py-3.5 px-4">Designation</th>
-                    <th className="py-3.5 px-4">Role</th>
-                    <th className="py-3.5 px-4">Shift Time</th>
-                    <th className="py-3.5 px-4">Compensation & Schedule</th>
-                    <th className="py-3.5 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {filteredStaff.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-14 text-center text-slate-500">
-                        <Users className="w-9 h-9 mx-auto mb-2 opacity-30 text-slate-400" />
-                        <div className="font-semibold text-slate-400">No staff members found</div>
-                        <div className="text-[11px] text-slate-500 mt-1">
-                          Try adjusting your search criteria or register a new staff member.
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredStaff.map((staff) => (
-                      <tr key={staff.id} className="hover:bg-slate-850/40 transition">
-                        {/* Member Name & Email */}
-                        <td className="py-3.5 px-4 sm:px-6">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-200 text-xs">
-                              {staff.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <div className="font-semibold text-white">{staff.name}</div>
-                              <div className="text-[10px] text-slate-400 font-mono">
-                                {staff.email || 'No email associated'}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
+          <button
+            onClick={handleSignOut}
+            disabled={isLoggingOut}
+            className="bg-black hover:bg-gray-800 disabled:opacity-50 text-white rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs font-semibold transition shadow-sm cursor-pointer"
+          >
+            <LogOut size={14} />
+            <span>{isLoggingOut ? 'Signing Out...' : 'Sign Out'}</span>
+          </button>
+        </div>
+      </nav>
 
-                        {/* Designation */}
-                        <td className="py-3.5 px-4">
-                          <span className="text-slate-300 font-medium">
-                            {staff.designation || <span className="text-slate-500 italic">Unassigned</span>}
-                          </span>
-                        </td>
-
-                        {/* Role */}
-                        <td className="py-3.5 px-4">
-                          {staff.role === 'admin' ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                              <ShieldCheck className="w-3 h-3" /> Admin
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                              <UserCheck className="w-3 h-3 text-slate-400" /> Staff
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Shift Time */}
-                        <td className="py-3.5 px-4">
-                          <span className="inline-flex items-center gap-1.5 font-mono text-slate-300 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-xs">
-                            <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                            {staff.shift_start_time}
-                          </span>
-                        </td>
-
-                        {/* Salary & Days */}
-                        <td className="py-3.5 px-4">
-                          <div className="space-y-1">
-                            <div className="text-[11px] font-mono text-slate-300">
-                              {staff.salary != null ? (
-                                <span className="text-emerald-400 font-semibold">
-                                  ${Number(staff.salary).toLocaleString()} /mo
-                                </span>
-                              ) : (
-                                <span className="text-slate-500 italic">Salary not set</span>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              {(staff.working_days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']).map((day) => (
-                                <span
-                                  key={day}
-                                  className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800/80 text-slate-400 border border-slate-700/60 font-mono"
-                                >
-                                  {day}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => handleOpenEditModal(staff)}
-                              title="Edit Staff"
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => setDeletingStaff(staff)}
-                              title="Delete Staff"
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 border border-transparent hover:border-rose-800/50 transition"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+      {/* ========================================================================= */}
+      {/* 2. PAGE HEADER                                                            */}
+      {/* ========================================================================= */}
+      <div className="max-w-7xl mx-auto mt-6 px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200 pb-5 mb-6">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                Staff Directory & Management
+              </h1>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+                <Users size={13} />
+                {staffList.length} Active Staff
+              </span>
             </div>
+            <p className="text-xs text-gray-500 mt-1 max-w-2xl">
+              Register new staff profiles directly into the public.profiles database, configure shift start times and schedules, and manage existing faculty.
+            </p>
+          </div>
+
+          {/* Quick link to Live Dashboard */}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-black bg-white border border-gray-200 px-3.5 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition"
+            >
+              <BarChart2 size={14} />
+              Open Live Dashboard
+            </Link>
           </div>
         </div>
-      )}
 
-      {/* ========================================================================= */}
-      {/* TAB 2: REGISTER NEW STAFF (MULTI-COLUMN FORM)                              */}
-      {/* ========================================================================= */}
-      {activeTab === 'register' && (
-        <div className="max-w-4xl mx-auto">
-          {/* Success Banner Card */}
-          {regSuccess && (
-            <div className="mb-8 p-6 bg-slate-900 border border-emerald-500/40 rounded-3xl shadow-2xl relative overflow-hidden">
-              <div className="absolute -top-16 -right-16 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-base font-bold text-white mb-1">
-                    Staff Account Provisioned Successfully
-                  </h3>
-                  <p className="text-xs text-slate-400 mb-4">
-                    The Supabase Auth user has been created and synced with the school profile roster without logging you out.
-                  </p>
-
-                  {/* Credentials Box */}
-                  <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-300 space-y-2 mb-4">
-                    <div className="flex justify-between items-center py-1 border-b border-slate-800/80">
-                      <span className="text-slate-500">Name:</span>
-                      <span className="font-semibold text-white">{regSuccess.staff.name}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1 border-b border-slate-800/80">
-                      <span className="text-slate-500">Email:</span>
-                      <span className="text-emerald-400 font-medium">{regSuccess.staff.email}</span>
-                    </div>
-                    <div className="flex justify-between items-center py-1">
-                      <span className="text-slate-500">Temporary Password:</span>
-                      <span className="bg-slate-900 px-2 py-0.5 rounded text-amber-300 font-bold border border-slate-800">
-                        {regSuccess.password}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button
-                      onClick={copyCredentials}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition active:scale-95"
-                    >
-                      {copiedPassword ? (
-                        <>
-                          <Check className="w-4 h-4 text-emerald-400" />
-                          Credentials Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4" />
-                          Copy Credentials
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => setRegSuccess(null)}
-                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition"
-                    >
-                      Register Another Staff
-                    </button>
-
-                    <button
-                      onClick={() => setActiveTab('roster')}
-                      className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition"
-                    >
-                      View in Staff Directory
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Registration Form Card */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
-            <div className="flex items-center gap-3 mb-6 pb-6 border-b border-slate-800">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
-                <UserPlus className="w-5 h-5" />
+        {/* ========================================================================= */}
+        {/* 3. NEW STAFF REGISTRATION FORM CARD                                       */}
+        {/* ========================================================================= */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600">
+                <UserPlus size={18} />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white tracking-tight">New Staff Registration</h2>
-                <p className="text-xs text-slate-400">
-                  Provision an official staff account with Supabase Auth credentials and configured shift schedule.
+                <h2 className="text-sm font-bold text-gray-900">
+                  Register New Staff Member
+                </h2>
+                <p className="text-[11px] text-gray-500">
+                  Utilizes Next.js Server Actions to insert staff records directly into public.profiles.
                 </p>
               </div>
             </div>
+            <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-gray-100 text-gray-600 border border-gray-200">
+              Server Action
+            </span>
+          </div>
 
-            {regError && (
-              <div className="mb-6 p-4 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300 flex items-center gap-2.5">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
-                <span>{regError}</span>
-              </div>
-            )}
+          {/* Form Feedback Alerts */}
+          {regError && (
+            <div className="mb-5 p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2.5">
+              <AlertCircle size={16} className="text-red-500 shrink-0" />
+              <span>{regError}</span>
+            </div>
+          )}
 
-            <form onSubmit={handleRegisterSubmit} className="space-y-6">
-              {/* Multi-Column Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Column 1: Identity & Credentials */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                      Full Name <span className="text-rose-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={regName}
-                      onChange={(e) => setRegName(e.target.value)}
-                      placeholder="e.g. Dr. Arthur Vance"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                      Email Address <span className="text-rose-400">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={regEmail}
-                      onChange={(e) => setRegEmail(e.target.value)}
-                      placeholder="e.g. arthur.vance@school.edu"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-                    />
-                    <p className="text-[10px] text-slate-500 mt-1">
-                      Used for Supabase Auth login and attendance verification.
+          {regSuccess && (
+            <div className="mb-5 p-4 rounded-lg bg-green-50 border border-green-200 text-green-800 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 size={18} className="text-green-600 shrink-0" />
+                <div>
+                  <span className="font-semibold">
+                    Staff profile for &quot;{regSuccess.staff.name}&quot; successfully created!
+                  </span>
+                  {regSuccess.generatedPassword && (
+                    <p className="text-[11px] text-green-700 mt-0.5">
+                      Temporary Auth Password: <code className="bg-green-100 px-1.5 py-0.5 rounded font-mono font-bold text-green-900">{regSuccess.generatedPassword}</code>
                     </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center justify-between">
-                      <span>Initial Password</span>
-                      <span className="text-[10px] text-slate-500">Leave blank to auto-generate</span>
-                    </label>
-                    <div className="relative">
-                      <KeyRound className="w-3.5 h-3.5 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
-                        type="text"
-                        value={regPassword}
-                        onChange={(e) => setRegPassword(e.target.value)}
-                        placeholder="e.g. Staff2026! or auto"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                      System Role
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setRegRole('staff')}
-                        className={`p-3 rounded-xl border text-xs font-medium text-left flex items-center gap-2.5 transition ${
-                          regRole === 'staff'
-                            ? 'bg-slate-950 border-emerald-500 text-emerald-300 shadow-sm'
-                            : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                        }`}
-                      >
-                        <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <div>
-                          <div className="font-semibold text-white">Staff</div>
-                          <div className="text-[10px] text-slate-500">Standard Check-in</div>
-                        </div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setRegRole('admin')}
-                        className={`p-3 rounded-xl border text-xs font-medium text-left flex items-center gap-2.5 transition ${
-                          regRole === 'admin'
-                            ? 'bg-slate-950 border-emerald-500 text-emerald-300 shadow-sm'
-                            : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                        }`}
-                      >
-                        <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <div>
-                          <div className="font-semibold text-white">Admin</div>
-                          <div className="text-[10px] text-slate-500">Full Dashboard Access</div>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
+                  )}
                 </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRegSuccess(null)}
+                className="text-green-700 hover:text-green-900 text-xs font-semibold px-2 py-1 rounded hover:bg-green-100 transition"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
 
-                {/* Column 2: Role, Shift, Salary */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                      Designation / Department
-                    </label>
-                    <div className="relative">
-                      <Briefcase className="w-3.5 h-3.5 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
-                        type="text"
-                        value={regDesignation}
-                        onChange={(e) => setRegDesignation(e.target.value)}
-                        placeholder="e.g. Head of Mathematics"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-                      />
-                    </div>
+          {/* Registration Form */}
+          <form onSubmit={handleRegisterSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {/* Field 1: Name */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <User size={15} />
                   </div>
+                  <input
+                    type="text"
+                    required
+                    value={regName}
+                    onChange={(e) => setRegName(e.target.value)}
+                    placeholder="e.g. Dr. Eleanor Vance"
+                    className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
+                  />
+                </div>
+              </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center justify-between">
-                      <span>Scheduled Shift Start Time</span>
-                      <span className="text-[10px] text-emerald-400 font-mono font-semibold">{regShift}</span>
-                    </label>
-                    <div className="relative">
-                      <Clock className="w-3.5 h-3.5 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
-                        type="time"
-                        step="1"
-                        value={regShift}
-                        onChange={(e) => setRegShift(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 transition font-mono"
-                      />
-                    </div>
-                    {/* Quick Shift Presets */}
-                    <div className="flex items-center gap-1.5 mt-2">
-                      <span className="text-[10px] text-slate-500">Presets:</span>
-                      {['07:30:00', '08:00:00', '08:30:00', '09:00:00'].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => setRegShift(preset)}
-                          className="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono transition"
-                        >
-                          {preset.substring(0, 5)}
-                        </button>
-                      ))}
-                    </div>
+              {/* Field 2: Designation */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Designation / Title
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <Briefcase size={15} />
                   </div>
+                  <input
+                    type="text"
+                    value={regDesignation}
+                    onChange={(e) => setRegDesignation(e.target.value)}
+                    placeholder="e.g. Senior Physics Faculty"
+                    className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
+                  />
+                </div>
+              </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                      Monthly Salary ($ USD)
-                    </label>
-                    <div className="relative">
-                      <DollarSign className="w-3.5 h-3.5 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <input
-                        type="number"
-                        min="0"
-                        step="100"
-                        value={regSalary}
-                        onChange={(e) => setRegSalary(e.target.value)}
-                        placeholder="e.g. 4800"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition font-mono"
-                      />
+              {/* Field 3: Shift Start Time */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Shift Start Time <span className="text-red-500">*</span>
+                </label>
+                <div className="space-y-1.5">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                      <Clock size={15} />
                     </div>
+                    <input
+                      type="time"
+                      required
+                      value={regShift}
+                      onChange={(e) => setRegShift(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
+                    />
+                  </div>
+                  {/* Presets */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-gray-400 font-medium">Presets:</span>
+                    {SHIFT_PRESETS.map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setRegShift(preset)}
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded border transition ${
+                          regShift === preset
+                            ? 'bg-black text-white border-black'
+                            : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+                        }`}
+                      >
+                        {preset}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Working Days Checkbox Group */}
-              <div className="pt-4 border-t border-slate-800/80">
+              {/* Field 4: Salary */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Monthly Compensation ($)
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <DollarSign size={15} />
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="50"
+                    value={regSalary}
+                    onChange={(e) => setRegSalary(e.target.value)}
+                    placeholder="e.g. 5400"
+                    className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
+                  />
+                </div>
+              </div>
+
+              {/* Field 5: Email (Optional) */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Email Address <span className="text-gray-400 font-normal">(Optional)</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <Mail size={15} />
+                  </div>
+                  <input
+                    type="email"
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    placeholder="e.g. eleanor@school.edu"
+                    className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
+                  />
+                </div>
+              </div>
+
+              {/* Field 6: Access Role */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Access Role
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRegRole('staff')}
+                    className={`py-2 text-xs font-semibold rounded-lg border transition text-center ${
+                      regRole === 'staff'
+                        ? 'bg-black text-white border-black shadow-sm'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    Staff (Default)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRegRole('admin')}
+                    className={`py-2 text-xs font-semibold rounded-lg border transition text-center ${
+                      regRole === 'admin'
+                        ? 'bg-black text-white border-black shadow-sm'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    Administrator
+                  </button>
+                </div>
+              </div>
+
+              {/* Field 7: Working Days (Span full width or 3 cols) */}
+              <div className="md:col-span-2 lg:col-span-3">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-medium text-slate-300">
-                    Scheduled Working Days
+                  <label className="text-xs font-semibold text-gray-700">
+                    Scheduled Working Days <span className="text-red-500">*</span>
                   </label>
-                  <div className="flex items-center gap-2 text-[10px]">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setRegWorkingDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri'])}
-                      className="text-emerald-400 hover:underline"
+                      className="text-[10px] font-semibold text-gray-600 hover:text-black bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded transition"
                     >
-                      Weekdays (Mon-Fri)
+                      Weekdays (Mon–Fri)
                     </button>
-                    <span className="text-slate-600">|</span>
                     <button
                       type="button"
                       onClick={() => setRegWorkingDays([...ALL_DAYS])}
-                      className="text-slate-400 hover:text-slate-200"
+                      className="text-[10px] font-semibold text-gray-600 hover:text-black bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded transition"
                     >
                       All 7 Days
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {ALL_DAYS.map((day) => {
                     const isSelected = regWorkingDays.includes(day);
                     return (
@@ -896,387 +697,516 @@ export default function StaffManagementScreen({
                         key={day}
                         type="button"
                         onClick={() => toggleWorkingDay(day, regWorkingDays, setRegWorkingDays)}
-                        className={`py-2.5 px-3 rounded-xl text-xs font-semibold font-mono border transition flex items-center justify-center gap-1.5 ${
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
                           isSelected
-                            ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-sm'
-                            : 'bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300 hover:border-slate-700'
+                            ? 'bg-black text-white border-black shadow-sm'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                         }`}
                       >
-                        {isSelected && <Check className="w-3 h-3 text-emerald-400" />}
-                        {day}
+                        {isSelected && <Check size={12} className="stroke-[3]" />}
+                        <span>{day}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
+            </div>
 
-              {/* Form Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+            {/* Form Action Controls */}
+            <div className="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between">
+              <p className="text-[11px] text-gray-500">
+                Staff member will be immediately available in the directory and scanner check-in system.
+              </p>
+
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('roster')}
-                  className="px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition"
+                  onClick={() => {
+                    setRegName('');
+                    setRegDesignation('');
+                    setRegShift('08:00');
+                    setRegSalary('');
+                    setRegEmail('');
+                    setRegWorkingDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+                    setRegError(null);
+                  }}
+                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-black transition"
                 >
-                  Cancel
+                  Clear
                 </button>
-
                 <button
                   type="submit"
-                  disabled={isPending}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 shadow-lg shadow-emerald-500/20 transition active:scale-95"
+                  disabled={isSubmitting}
+                  className="bg-black hover:bg-gray-800 disabled:opacity-50 text-white rounded-lg px-5 py-2.5 text-xs font-semibold transition shadow-sm flex items-center gap-2 cursor-pointer"
                 >
-                  {isPending ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Provisioning Account...
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="w-4 h-4" />
-                      Register Staff Account
-                    </>
-                  )}
+                  <Plus size={15} />
+                  <span>{isSubmitting ? 'Inserting Record...' : 'Add Staff Member'}</span>
                 </button>
               </div>
-            </form>
-          </div>
+            </div>
+          </form>
         </div>
-      )}
 
-      {/* ========================================================================= */}
-      {/* TAB 3: ATTENDANCE LOG VIEWER (HISTORICAL AUDIT LOG)                       */}
-      {/* ========================================================================= */}
-      {activeTab === 'logs' && (
-        <div className="space-y-6">
-          {/* Audit Header & Range Filters */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">
-                  <History className="w-3.5 h-3.5" />
-                  Historical Audit Logs
-                </div>
-                <h2 className="text-lg font-bold text-white tracking-tight">
-                  Attendance Records & Audit Trail
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Default query loads the past 3 months. Select custom dates to filter historical punches.
-                </p>
+        {/* ========================================================================= */}
+        {/* 4. CLEAN DATA TABLE CARD (Directly below the form)                       */}
+        {/* ========================================================================= */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-12">
+          {/* Table Toolbar */}
+          <div className="p-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-bold text-gray-900">
+                Registered Staff Profiles Directory
+              </h2>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                Showing {filteredStaff.length} of {staffList.length} faculty profiles from public.profiles
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Search Bar */}
+              <div className="relative min-w-[240px]">
+                <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search staff, designation, email..."
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
+                />
               </div>
 
-              {/* Quick Stat Chips */}
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs">
-                  <span className="text-slate-500 mr-1.5 font-medium">Total:</span>
-                  <span className="font-bold text-white font-mono">{logStats.total}</span>
-                </div>
-                <div className="px-3 py-1.5 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-xs text-emerald-400">
-                  <span className="opacity-75 mr-1.5 font-medium">Present:</span>
-                  <span className="font-bold font-mono">{logStats.present}</span>
-                </div>
-                <div className="px-3 py-1.5 rounded-xl bg-amber-950/30 border border-amber-500/30 text-xs text-amber-400">
-                  <span className="opacity-75 mr-1.5 font-medium">Late:</span>
-                  <span className="font-bold font-mono">{logStats.late}</span>
-                </div>
-                <div className="px-3 py-1.5 rounded-xl bg-rose-950/30 border border-rose-500/30 text-xs text-rose-400">
-                  <span className="opacity-75 mr-1.5 font-medium">Absent:</span>
-                  <span className="font-bold font-mono">{logStats.absent}</span>
-                </div>
+              {/* Role Filter Pills */}
+              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200 text-xs">
+                <button
+                  onClick={() => setRoleFilter('all')}
+                  className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition ${
+                    roleFilter === 'all'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setRoleFilter('staff')}
+                  className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition ${
+                    roleFilter === 'staff'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Staff
+                </button>
+                <button
+                  onClick={() => setRoleFilter('admin')}
+                  className={`px-2.5 py-1 rounded-md font-semibold text-[11px] transition ${
+                    roleFilter === 'admin'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Admin
+                </button>
+              </div>
+
+              {/* Refresh */}
+              <button
+                onClick={handleRefreshStaff}
+                disabled={isRefreshing}
+                title="Refresh staff list"
+                className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:text-black hover:bg-gray-50 transition"
+              >
+                <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+              </button>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/70 border-b border-gray-200 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="py-3 px-5">Staff Member</th>
+                  <th className="py-3 px-5">Designation</th>
+                  <th className="py-3 px-5">Shift Time</th>
+                  <th className="py-3 px-5">Monthly Salary</th>
+                  <th className="py-3 px-5">Working Days</th>
+                  <th className="py-3 px-5">Role</th>
+                  <th className="py-3 px-5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-xs">
+                {filteredStaff.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-gray-400">
+                      <Users size={32} className="mx-auto mb-2 text-gray-300 stroke-[1.5]" />
+                      <p className="font-semibold text-gray-600">No staff members found</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        {searchQuery
+                          ? 'Try adjusting your search or role filter.'
+                          : 'Register a staff member above to get started.'}
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStaff.map((staff) => {
+                    const initials = staff.name
+                      .split(' ')
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((n) => n[0])
+                      .join('')
+                      .toUpperCase();
+
+                    return (
+                      <tr
+                        key={staff.id}
+                        className="hover:bg-gray-50/60 transition group"
+                      >
+                        {/* 1. Staff Name */}
+                        <td className="py-3.5 px-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-teal-100/80 text-teal-800 font-bold text-xs flex items-center justify-center shrink-0">
+                              {initials || 'U'}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900">
+                                {staff.name}
+                              </div>
+                              <div className="text-[11px] text-gray-400 font-mono">
+                                {staff.email || `${staff.id.substring(0, 8)}...`}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 2. Designation */}
+                        <td className="py-3.5 px-5 text-gray-600">
+                          {staff.designation || (
+                            <span className="text-gray-300 italic">Not set</span>
+                          )}
+                        </td>
+
+                        {/* 3. Shift Time */}
+                        <td className="py-3.5 px-5">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-100 text-gray-700 font-mono font-medium text-[11px]">
+                            <Clock size={12} className="text-gray-400" />
+                            {formatShiftTime(staff.shift_start_time)}
+                          </span>
+                        </td>
+
+                        {/* 4. Salary */}
+                        <td className="py-3.5 px-5 font-medium text-gray-700">
+                          {formatSalary(staff.salary)}
+                        </td>
+
+                        {/* 5. Working Days */}
+                        <td className="py-3.5 px-5">
+                          <div className="flex flex-wrap gap-1 max-w-xs">
+                            {staff.working_days && staff.working_days.length > 0 ? (
+                              staff.working_days.map((day) => (
+                                <span
+                                  key={day}
+                                  className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-medium"
+                                >
+                                  {day}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-gray-400 text-[11px]">Mon–Fri</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* 6. Role */}
+                        <td className="py-3.5 px-5">
+                          {staff.role === 'admin' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-purple-100 text-purple-700 text-[10px] font-bold uppercase tracking-wider border border-purple-200">
+                              <ShieldCheck size={11} />
+                              Admin
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold uppercase tracking-wider border border-gray-200">
+                              Staff
+                            </span>
+                          )}
+                        </td>
+
+                        {/* 7. Actions */}
+                        <td className="py-3.5 px-5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => openEditModal(staff)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-700 hover:text-black hover:bg-gray-100 transition"
+                              title="Edit profile"
+                            >
+                              <Edit2 size={13} />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => openDeleteModal(staff)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 transition"
+                              title="Delete profile"
+                            >
+                              <Trash2 size={13} />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 5. HISTORICAL ATTENDANCE LOG VIEWER (Collapsible Section)                 */}
+        {/* ========================================================================= */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowLogs(!showLogs)}
+            className="w-full p-5 flex items-center justify-between text-left hover:bg-gray-50/50 transition border-b border-gray-100"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600">
+                <FileSpreadsheet size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">
+                  Historical Attendance Logs Audit (Past 3 Months)
+                </h3>
+                <p className="text-[11px] text-gray-500">
+                  Inspect check-in timestamps and filter by custom date ranges.
+                </p>
               </div>
             </div>
 
-            {/* Date Pickers Form */}
-            <form
-              onSubmit={handleFilterLogs}
-              className="pt-4 border-t border-slate-800/80 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4"
-            >
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-slate-400 font-medium">From:</label>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 font-medium hidden sm:inline">
+                {showLogs ? 'Collapse Audit Logs' : 'View Audit Logs'}
+              </span>
+              {showLogs ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+            </div>
+          </button>
+
+          {showLogs && (
+            <div className="p-5">
+              {/* Date Filters */}
+              <form onSubmit={handleFilterLogs} className="flex flex-wrap items-end gap-3 mb-5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                    Start Date
+                  </label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    className="px-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-900"
                   />
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-slate-400 font-medium">To:</label>
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                    End Date
+                  </label>
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    className="px-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-900"
                   />
                 </div>
-
                 <button
                   type="submit"
                   disabled={isFilteringLogs}
-                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 transition"
+                  className="bg-black hover:bg-gray-800 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-xs font-semibold transition"
                 >
-                  {isFilteringLogs ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Filter className="w-3.5 h-3.5" />
-                  )}
-                  Filter Records
+                  {isFilteringLogs ? 'Filtering...' : 'Apply Date Filter'}
                 </button>
+              </form>
 
-                <button
-                  type="button"
-                  onClick={handleResetLogRange}
-                  disabled={isFilteringLogs}
-                  className="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white bg-slate-950 border border-slate-800 hover:border-slate-700 transition"
-                >
-                  Reset (3 Months)
-                </button>
-              </div>
-
-              {/* Status & Name Filter */}
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1 sm:w-56">
-                  <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={logSearchQuery}
-                    onChange={(e) => setLogSearchQuery(e.target.value)}
-                    placeholder="Search logs by staff..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-                  />
+              {logFilterMessage && (
+                <div className="mb-4 text-xs text-teal-700 bg-teal-50 border border-teal-200 px-3 py-2 rounded-lg">
+                  {logFilterMessage}
                 </div>
+              )}
 
-                <select
-                  value={logStatusFilter}
-                  onChange={(e) => setLogStatusFilter(e.target.value as any)}
-                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="present">Present</option>
-                  <option value="late">Late</option>
-                  <option value="absent">Absent</option>
-                </select>
-              </div>
-            </form>
-
-            {logFilterMessage && (
-              <div className="text-[11px] text-emerald-400 font-mono animate-fade-in">
-                {logFilterMessage}
-              </div>
-            )}
-          </div>
-
-          {/* Logs Data Table */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950/70 border-b border-slate-800 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  <tr>
-                    <th className="py-3.5 px-4 sm:px-6">Staff Member</th>
-                    <th className="py-3.5 px-4">Designation</th>
-                    <th className="py-3.5 px-4">Check-in Timestamp</th>
-                    <th className="py-3.5 px-4">Status</th>
-                    <th className="py-3.5 px-4 text-right">Punch ID</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {filteredLogs.length === 0 ? (
+              {/* Logs Table */}
+              <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-50 text-[11px] font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">
                     <tr>
-                      <td colSpan={5} className="py-14 text-center text-slate-500">
-                        <FileSpreadsheet className="w-9 h-9 mx-auto mb-2 opacity-30 text-slate-400" />
-                        <div className="font-semibold text-slate-400">No attendance logs found</div>
-                        <div className="text-[11px] text-slate-500 mt-1">
-                          No punch events registered for the selected date range.
-                        </div>
-                      </td>
+                      <th className="py-2.5 px-4">Staff Member</th>
+                      <th className="py-2.5 px-4">Designation</th>
+                      <th className="py-2.5 px-4">Check-in Timestamp</th>
+                      <th className="py-2.5 px-4">Status</th>
                     </tr>
-                  ) : (
-                    filteredLogs.map((log) => {
-                      const logDate = new Date(log.check_in_time);
-                      const formattedDate = !isNaN(logDate.getTime())
-                        ? logDate.toLocaleDateString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })
-                        : log.check_in_time;
-                      const formattedTime = !isNaN(logDate.getTime())
-                        ? logDate.toLocaleTimeString(undefined, {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
-                          })
-                        : '';
-
-                      return (
-                        <tr key={log.id} className="hover:bg-slate-850/40 transition">
-                          {/* Teacher Name */}
-                          <td className="py-3.5 px-4 sm:px-6">
-                            <div className="flex items-center gap-3">
-                              <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-[11px]">
-                                {(log.profiles?.name || 'T').charAt(0).toUpperCase()}
-                              </div>
-                              <span className="font-semibold text-white">
-                                {log.profiles?.name || 'Unassigned Teacher'}
-                              </span>
-                            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-8 text-center text-gray-400 text-xs">
+                          No attendance records found for selected period.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-gray-50/50">
+                          <td className="py-2.5 px-4 font-medium text-gray-900">
+                            {log.profiles?.name || 'Unknown Staff'}
                           </td>
-
-                          {/* Designation */}
-                          <td className="py-3.5 px-4">
-                            <span className="text-slate-400">
-                              {log.profiles?.designation || <span className="italic text-slate-600">N/A</span>}
-                            </span>
+                          <td className="py-2.5 px-4 text-gray-600">
+                            {log.profiles?.designation || '—'}
                           </td>
-
-                          {/* Timestamp */}
-                          <td className="py-3.5 px-4">
-                            <div className="font-mono text-slate-200">{formattedDate}</div>
-                            <div className="font-mono text-[10px] text-slate-500">{formattedTime}</div>
+                          <td className="py-2.5 px-4 font-mono text-gray-500">
+                            {new Date(log.check_in_time).toLocaleString()}
                           </td>
-
-                          {/* Status Badge */}
-                          <td className="py-3.5 px-4">
-                            {log.status === 'present' && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                Present
-                              </span>
-                            )}
-                            {log.status === 'late' && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                                Late
-                              </span>
-                            )}
-                            {log.status === 'absent' && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                                Absent
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Short Monospace UUID */}
-                          <td className="py-3.5 px-4 text-right">
-                            <span className="font-mono text-[10px] text-slate-500 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                              {log.id.substring(0, 8)}...
+                          <td className="py-2.5 px-4">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                log.status === 'present'
+                                  ? 'bg-green-100 text-green-700'
+                                  : log.status === 'late'
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-red-100 text-red-700'
+                              }`}
+                            >
+                              {log.status}
                             </span>
                           </td>
                         </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* ========================================================================= */}
-      {/* EDIT STAFF MODAL                                                          */}
+      {/* 6. EDIT STAFF MODAL                                                       */}
       {/* ========================================================================= */}
       {editingStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg p-6 sm:p-7 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
-              <div className="flex items-center gap-2 text-white font-bold text-base">
-                <Edit2 className="w-4 h-4 text-emerald-400" />
-                Edit Staff Profile
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Edit2 size={16} className="text-gray-700" />
+                <h3 className="text-sm font-bold text-gray-900">
+                  Edit Staff Profile
+                </h3>
               </div>
               <button
                 onClick={() => setEditingStaff(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg transition"
               >
-                <X className="w-4 h-4" />
+                <X size={16} />
               </button>
             </div>
 
             {editError && (
-              <div className="mb-4 p-3 bg-rose-950/40 border border-rose-500/30 rounded-xl text-xs text-rose-300 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
-                <span>{editError}</span>
+              <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
+                {editError}
               </div>
             )}
 
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Full Name
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Full Name *
                 </label>
                 <input
                   type="text"
                   required
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
+                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Designation / Department
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Designation / Role Title
                 </label>
                 <input
                   type="text"
                   value={editDesignation}
                   onChange={(e) => setEditDesignation(e.target.value)}
-                  placeholder="e.g. Physics Teacher"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
+                  placeholder="e.g. Senior Faculty"
+                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
-                    Shift Start Time
-                  </label>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Shift Start Time *
+                </label>
+                <div className="space-y-1.5">
                   <input
                     type="time"
-                    step="1"
+                    required
                     value={editShift}
                     onChange={(e) => setEditShift(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500 transition"
+                    className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
-                    Salary ($ USD)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="100"
-                    value={editSalary}
-                    onChange={(e) => setEditSalary(e.target.value)}
-                    placeholder="e.g. 4500"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500 transition"
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-gray-400">Presets:</span>
+                    {SHIFT_PRESETS.map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setEditShift(p)}
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded border transition ${
+                          editShift === p
+                            ? 'bg-black text-white border-black'
+                            : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  System Role
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Monthly Compensation ($)
                 </label>
-                <select
-                  value={editRole}
-                  onChange={(e) => setEditRole(e.target.value as any)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="staff">Staff (Standard Check-in)</option>
-                  <option value="admin">Administrator (Full Dashboard Access)</option>
-                </select>
+                <input
+                  type="number"
+                  min="0"
+                  step="50"
+                  value={editSalary}
+                  onChange={(e) => setEditSalary(e.target.value)}
+                  placeholder="e.g. 5400"
+                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="e.g. staff@school.edu"
+                  className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                   Scheduled Working Days
                 </label>
-                <div className="grid grid-cols-7 gap-1.5">
+                <div className="flex flex-wrap gap-1.5">
                   {ALL_DAYS.map((day) => {
                     const isSelected = editWorkingDays.includes(day);
                     return (
@@ -1284,10 +1214,10 @@ export default function StaffManagementScreen({
                         key={day}
                         type="button"
                         onClick={() => toggleWorkingDay(day, editWorkingDays, setEditWorkingDays)}
-                        className={`py-1.5 rounded-lg text-[11px] font-mono border font-semibold transition ${
+                        className={`px-2.5 py-1 rounded text-xs font-semibold border transition ${
                           isSelected
-                            ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
-                            : 'bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-300'
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                         }`}
                       >
                         {day}
@@ -1297,20 +1227,50 @@ export default function StaffManagementScreen({
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Role
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditRole('staff')}
+                    className={`py-1.5 text-xs font-semibold rounded-lg border transition text-center ${
+                      editRole === 'staff'
+                        ? 'bg-black text-white border-black'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    Staff
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditRole('admin')}
+                    className={`py-1.5 text-xs font-semibold rounded-lg border transition text-center ${
+                      editRole === 'admin'
+                        ? 'bg-black text-white border-black'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    Admin
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setEditingStaff(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition"
+                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-black rounded-lg hover:bg-gray-100 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isPending}
-                  className="px-5 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 transition"
+                  disabled={isUpdating}
+                  className="bg-black hover:bg-gray-800 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-xs font-semibold transition shadow-sm"
                 >
-                  {isPending ? 'Saving...' : 'Save Changes'}
+                  {isUpdating ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
@@ -1319,33 +1279,37 @@ export default function StaffManagementScreen({
       )}
 
       {/* ========================================================================= */}
-      {/* DELETE CONFIRMATION DIALOG                                                */}
+      {/* 7. DELETE CONFIRMATION MODAL                                             */}
       {/* ========================================================================= */}
       {deletingStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-sm p-6 text-center shadow-2xl">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-4">
-              <Trash2 className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 max-w-md w-full p-6">
+            <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-4">
+              <AlertTriangle size={20} />
             </div>
-            <h3 className="text-base font-bold text-white mb-1">Remove Staff Member?</h3>
-            <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-              Are you sure you want to remove <span className="text-white font-semibold">{deletingStaff.name}</span>? This will permanently delete their profile and associated attendance logs.
+
+            <h3 className="text-base font-bold text-gray-900 mb-1">
+              Delete Staff Member?
+            </h3>
+            <p className="text-xs text-gray-500 mb-6 leading-relaxed">
+              Are you sure you want to permanently remove <strong className="text-gray-900">{deletingStaff.name}</strong> from public.profiles? All corresponding attendance logs will also be cascade-deleted.
             </p>
-            <div className="flex items-center justify-center gap-3">
+
+            <div className="flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setDeletingStaff(null)}
-                className="w-1/2 py-2.5 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition"
+                className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-black rounded-lg hover:bg-gray-100 transition"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                disabled={isPending}
                 onClick={handleDeleteConfirm}
-                className="w-1/2 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-50 shadow-lg shadow-rose-600/20 transition"
+                disabled={isDeleting}
+                className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-xs font-semibold transition shadow-sm cursor-pointer"
               >
-                {isPending ? 'Deleting...' : 'Confirm Delete'}
+                {isDeleting ? 'Deleting...' : 'Delete Staff Profile'}
               </button>
             </div>
           </div>

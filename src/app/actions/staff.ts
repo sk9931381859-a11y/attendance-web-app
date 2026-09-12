@@ -132,19 +132,20 @@ export async function getStaffListAction(): Promise<StaffMember[]> {
 }
 
 /**
- * Server Action: Secure Staff Registration
- * Uses process.env.SUPABASE_SERVICE_ROLE_KEY to invoke supabase.auth.admin.createUser().
- * Provisions auth user without terminating the principal's session, then creates profile.
+/**
+ * Server Action: Direct Staff Profile Creation into public.profiles.
+ * Inserts real staff data (Name, Designation, Shift Time, Salary, Working Days, optional Email & Role).
+ * If email is provided, optionally provisions an auth user so they can log in.
  */
-export async function registerStaffAction(data: {
+export async function createStaffAction(data: {
   name: string;
-  email: string;
-  password?: string;
-  designation?: string;
-  shift_start_time?: string;
-  salary?: number | string;
-  working_days?: string[];
+  designation?: string | null;
+  shift_start_time: string;
+  salary?: number | string | null;
+  working_days?: string[] | null;
   role?: 'staff' | 'admin';
+  email?: string | null;
+  password?: string | null;
 }): Promise<StaffActionResult> {
   try {
     await verifyAdminRole();
@@ -155,77 +156,100 @@ export async function registerStaffAction(data: {
       return { success: false, error: 'A valid staff name (minimum 2 characters) is required.' };
     }
 
-    const email = data.email?.trim().toLowerCase();
-    if (!email || !email.includes('@')) {
-      return { success: false, error: 'A valid email address is required.' };
-    }
-
-    const password = data.password?.trim() || `Staff${Math.floor(100000 + Math.random() * 900000)}!`;
-    if (password.length < 6) {
-      return { success: false, error: 'Password must be at least 6 characters long.' };
-    }
-
     const shift_start_time = normalizeTime(data.shift_start_time);
     const role = data.role === 'admin' ? 'admin' : 'staff';
     const designation = data.designation?.trim() || null;
-    const salary = data.salary !== undefined && data.salary !== '' ? Number(data.salary) : null;
+    const salary = data.salary !== undefined && data.salary !== '' && data.salary !== null ? Number(data.salary) : null;
     const working_days = data.working_days && data.working_days.length > 0
       ? data.working_days
       : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-    // 1. Create Supabase Auth User via Service Role Admin API
-    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        name,
-        role,
-        designation,
-      },
-    });
+    const email = data.email?.trim().toLowerCase() || null;
+    let userId: string | undefined = undefined;
+    let generatedPassword: string | undefined = undefined;
 
-    let userId: string;
+    // If an email address is provided, provision auth user so staff can log in
+    if (email && email.includes('@')) {
+      generatedPassword = data.password?.trim() || `Staff${Math.floor(100000 + Math.random() * 900000)}!`;
+      try {
+        const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+          email,
+          password: generatedPassword,
+          email_confirm: true,
+          user_metadata: {
+            name,
+            role,
+            designation,
+          },
+        });
 
-    if (authError) {
-      // If user already exists in auth, check if they exist in profiles
-      if (authError.message.toLowerCase().includes('already registered') || authError.message.toLowerCase().includes('already exists')) {
-        const { data: existingUser } = await adminClient
-          .from('profiles')
-          .select('id')
-          .eq('email', email)
-          .maybeSingle();
+        if (!authError && authData?.user) {
+          userId = authData.user.id;
+        } else if (authError) {
+          // If auth user already exists, check if profile already exists
+          if (authError.message.toLowerCase().includes('already registered') || authError.message.toLowerCase().includes('already exists')) {
+            const { data: existingUser } = await adminClient
+              .from('profiles')
+              .select('id')
+              .eq('email', email)
+              .maybeSingle();
 
-        if (existingUser) {
-          return { success: false, error: `A staff member with email "${email}" already exists.` };
+            if (existingUser) {
+              return { success: false, error: `A staff member with email "${email}" already exists.` };
+            }
+          } else {
+            console.warn('Auth user creation notice:', authError.message);
+          }
         }
-        return { success: false, error: `Auth account with email "${email}" exists. Please use a distinct email address.` };
+      } catch (authErr) {
+        console.warn('Error creating auth user, proceeding with direct profile insert:', authErr);
       }
-      console.error('Failed to create auth user:', authError);
-      return { success: false, error: `Auth registration failed: ${authError.message}` };
     }
 
-    userId = authData.user.id;
+    // Direct insert into public.profiles
+    const insertPayload: Record<string, any> = {
+      name,
+      shift_start_time,
+      role,
+      designation,
+      salary,
+      working_days,
+    };
 
-    // 2. Upsert profile record linked to returning auth user ID
-    const { data: profile, error: profileError } = await adminClient
-      .from('profiles')
-      .upsert({
-        id: userId,
-        name,
-        email,
-        role,
-        designation,
-        shift_start_time,
-        salary,
-        working_days,
-      })
-      .select()
-      .single();
+    if (userId) {
+      insertPayload.id = userId;
+    }
+    if (email) {
+      insertPayload.email = email;
+    }
 
-    if (profileError) {
-      console.error('Failed to create profile record:', profileError);
-      return { success: false, error: `Profile creation failed: ${profileError.message}` };
+    let profile: any;
+    if (userId) {
+      // Auth trigger already created a skeleton profile, update/upsert with full staff data
+      const { data: upsertedProfile, error: profileError } = await adminClient
+        .from('profiles')
+        .upsert(insertPayload)
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('Failed to upsert staff profile into public.profiles:', profileError);
+        return { success: false, error: `Database save failed: ${profileError.message}` };
+      }
+      profile = upsertedProfile;
+    } else {
+      // Direct insert into public.profiles
+      const { data: insertedProfile, error: profileError } = await adminClient
+        .from('profiles')
+        .insert(insertPayload)
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('Failed to insert staff profile into public.profiles:', profileError);
+        return { success: false, error: `Database insert failed: ${profileError.message}` };
+      }
+      profile = insertedProfile;
     }
 
     revalidatePath('/dashboard/manage');
@@ -234,12 +258,12 @@ export async function registerStaffAction(data: {
 
     return {
       success: true,
-      generatedPassword: password,
+      generatedPassword,
       staff: {
         id: profile.id,
         name: profile.name,
         email: profile.email,
-        role: profile.role,
+        role: (profile.role as 'staff' | 'admin') || 'staff',
         designation: profile.designation,
         shift_start_time: profile.shift_start_time,
         salary: profile.salary != null ? Number(profile.salary) : null,
@@ -248,13 +272,18 @@ export async function registerStaffAction(data: {
       },
     };
   } catch (err: unknown) {
-    console.error('Error in registerStaffAction:', err);
+    console.error('Error in createStaffAction:', err);
     return {
       success: false,
       error: err instanceof Error ? err.message : 'An unexpected error occurred during staff registration.',
     };
   }
 }
+
+/**
+ * Backwards compatibility alias for registerStaffAction
+ */
+export const registerStaffAction = createStaffAction;
 
 /**
  * Server Action: Updates an existing staff member's profile.
@@ -267,6 +296,7 @@ export async function updateStaffAction(data: {
   designation?: string | null;
   salary?: number | string | null;
   working_days?: string[] | null;
+  email?: string | null;
 }): Promise<StaffActionResult> {
   try {
     await verifyAdminRole();
@@ -286,6 +316,7 @@ export async function updateStaffAction(data: {
     const designation = data.designation !== undefined ? (data.designation?.trim() || null) : undefined;
     const salary = data.salary !== undefined && data.salary !== '' && data.salary !== null ? Number(data.salary) : null;
     const working_days = data.working_days;
+    const email = data.email !== undefined ? (data.email?.trim().toLowerCase() || null) : undefined;
 
     const updatePayload: Record<string, any> = {
       name,
@@ -296,6 +327,7 @@ export async function updateStaffAction(data: {
     if (designation !== undefined) updatePayload.designation = designation;
     if (data.salary !== undefined) updatePayload.salary = salary;
     if (working_days !== undefined) updatePayload.working_days = working_days;
+    if (email !== undefined) updatePayload.email = email;
 
     const { data: updated, error } = await adminClient
       .from('profiles')
