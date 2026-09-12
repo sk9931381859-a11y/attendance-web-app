@@ -7,6 +7,7 @@ const ON_TIME_GRACE_MINUTES = 10;
 
 export interface CheckInPayload {
   token: string;
+  device_id?: string;
   // NOTE: teacherId is strictly NOT accepted from the client.
   // It is extracted securely from the active authenticated session cookie on the server,
   // guaranteeing cryptographic proof of identity.
@@ -28,6 +29,7 @@ export interface CheckInResponse {
   error?: string | CheckInErrorObject;
   details?: string;
   alreadyCheckedIn?: boolean;
+  deviceLocked?: boolean;
 }
 
 export interface ScannerSession {
@@ -42,6 +44,8 @@ export interface ScannerSession {
     role?: string | null;
     shift_start_time?: string | null;
     designation?: string | null;
+    registered_device_id?: string | null;
+    device_locked_at?: string | null;
   };
 }
 
@@ -52,9 +56,10 @@ export interface ScannerSession {
  * Extracts teacher_id strictly from the authenticated user's active session cookie
  * via supabase.auth.getUser(). Guarantees cryptographic proof of identity.
  * Bypasses client-side identity spoofing completely.
+ * Enforces Cryptographic Device Lock (Scenarios A, B, C).
  */
 export async function submitCheckInAction(payload: CheckInPayload): Promise<CheckInResponse> {
-  const { token } = payload;
+  const { token, device_id } = payload;
 
   if (!token || typeof token !== 'string') {
     return { success: false, error: 'A valid 6-digit TOTP code is required.' };
@@ -102,7 +107,7 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
     // Retrieve staff profile for authenticated user
     let { data: profile } = await supabase
       .from('profiles')
-      .select('id, name, email, shift_start_time, designation')
+      .select('id, name, email, shift_start_time, designation, registered_device_id, device_locked_at')
       .eq('id', teacherId)
       .maybeSingle();
 
@@ -117,7 +122,7 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
           shift_start_time: '08:00:00',
           role: 'staff',
         })
-        .select()
+        .select('id, name, email, shift_start_time, designation, registered_device_id, device_locked_at')
         .single();
       if (newProfile) {
         profile = newProfile;
@@ -129,7 +134,55 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
       name: user.user_metadata?.name || user.email?.split('@')[0] || 'Staff Member',
       email: user.email,
       shift_start_time: '08:00:00',
+      registered_device_id: null,
+      device_locked_at: null,
     };
+
+    // 3. Cryptographic Device Lock & Verification
+    const incomingDeviceId = (device_id || '').trim();
+
+    if (!incomingDeviceId) {
+      return {
+        success: false,
+        error: 'Device fingerprint missing. Please ensure cookies and localStorage are enabled.',
+      };
+    }
+
+    if (!effectiveProfile.registered_device_id) {
+      // Scenario A (First Login / Device Binding):
+      // If registered_device_id is null, save the incoming device_id to profiles with device_locked_at = new Date()
+      const nowIso = now.toISOString();
+      const { error: bindError } = await supabase
+        .from('profiles')
+        .update({
+          registered_device_id: incomingDeviceId,
+          device_locked_at: nowIso,
+        })
+        .eq('id', teacherId);
+
+      if (bindError) {
+        console.error('Failed to bind device to profile:', bindError);
+        return {
+          success: false,
+          error: 'Failed to bind device. Please contact the Principal.',
+        };
+      }
+
+      effectiveProfile.registered_device_id = incomingDeviceId;
+      effectiveProfile.device_locked_at = nowIso;
+    } else if (effectiveProfile.registered_device_id === incomingDeviceId) {
+      // Scenario B (Authorized Match):
+      // registered_device_id === device_id -> proceed with the check-in
+    } else {
+      // Scenario C (Mismatched Device):
+      // registered_device_id !== device_id -> immediately abort the transaction
+      return {
+        success: false,
+        error:
+          'Unauthorized Device. This account is locked to another phone. Contact the Principal to reset your device binding.',
+        deviceLocked: true,
+      };
+    }
 
     // Determine status (present vs late based on shift_start_time + 10 min grace period)
     let status: 'present' | 'late' = 'present';
@@ -247,7 +300,7 @@ export async function getScannerSessionAction(): Promise<ScannerSession | null> 
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, name, email, role, shift_start_time, designation')
+      .select('id, name, email, role, shift_start_time, designation, registered_device_id, device_locked_at')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -263,6 +316,8 @@ export async function getScannerSessionAction(): Promise<ScannerSession | null> 
         role: 'staff',
         shift_start_time: '08:00:00',
         designation: null,
+        registered_device_id: null,
+        device_locked_at: null,
       },
     };
   } catch (err) {

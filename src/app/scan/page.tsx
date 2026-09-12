@@ -2,50 +2,44 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Camera,
   CheckCircle2,
   AlertTriangle,
-  AlertCircle,
   RefreshCw,
   ArrowLeft,
   ShieldCheck,
-  User,
   CameraOff,
   Building2,
-  Lock,
-  Mail,
-  Eye,
-  EyeOff,
   LogOut,
   Clock,
   Briefcase,
+  Smartphone,
+  ShieldAlert,
 } from 'lucide-react';
 import jsQR from 'jsqr';
 import { createClient } from '@/lib/supabase/client';
 import {
   submitCheckInAction,
-  getScannerSessionAction,
   CheckInResponse,
   ScannerSession,
 } from '@/app/actions/checkin';
+import { getOrCreateDeviceId } from '@/lib/device';
 
 interface CheckInError {
   message: string;
   details?: string;
+  deviceLocked?: boolean;
 }
 
 export default function ScanPage() {
-  // Session State
+  const router = useRouter();
+
+  // Session & Device State
   const [session, setSession] = useState<ScannerSession | null>(null);
   const [loadingSession, setLoadingSession] = useState<boolean>(true);
-
-  // Login Form State (when unauthenticated)
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [deviceId, setDeviceId] = useState<string>('');
 
   // Scanner & Submission State
   const [isScanning, setIsScanning] = useState<boolean>(false);
@@ -62,7 +56,13 @@ export default function ScanPage() {
   const animFrameRef = useRef<number | null>(null);
   const isVerifyingRef = useRef<boolean>(false);
 
-  // Helper: Format shift time
+  // Initialize or retrieve persistent device UUID
+  useEffect(() => {
+    const id = getOrCreateDeviceId();
+    setDeviceId(id);
+  }, []);
+
+  // Format scheduled shift start time
   const formatShiftTime = (timeStr?: string | null) => {
     if (!timeStr) return '08:00 AM';
     const parts = timeStr.split(':');
@@ -73,7 +73,7 @@ export default function ScanPage() {
     return `${String(formattedHours).padStart(2, '0')}:${minutes} ${ampm}`;
   };
 
-  // 1. Check Authenticated Session on Mount
+  // 1. Verify Authenticated Session on Mount
   const loadSession = useCallback(async () => {
     setLoadingSession(true);
     try {
@@ -83,13 +83,13 @@ export default function ScanPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setSession(null);
+        router.push('/login');
         return;
       }
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id, name, email, role, shift_start_time, designation')
+        .select('id, name, email, role, shift_start_time, designation, registered_device_id, device_locked_at')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -102,20 +102,22 @@ export default function ScanPage() {
           role: 'staff',
           shift_start_time: '08:00:00',
           designation: null,
+          registered_device_id: null,
+          device_locked_at: null,
         },
       });
     } catch (err) {
       console.error('Failed to load scanner session:', err);
-      setSession(null);
+      router.push('/login');
     } finally {
       setLoadingSession(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     loadSession();
 
-    // Subscribe to auth changes via Supabase client
+    // Subscribe to auth state changes
     const supabase = createClient();
     const {
       data: { subscription },
@@ -123,92 +125,25 @@ export default function ScanPage() {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         loadSession();
       } else if (event === 'SIGNED_OUT') {
-        setSession(null);
+        router.push('/login');
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [loadSession]);
+  }, [loadSession, router]);
 
-  // 2. Handle Login Submission
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError(null);
-
-    const email = loginEmail.trim();
-    const password = loginPassword.trim();
-
-    if (!email || !password) {
-      setLoginError('Please enter both your email address and password.');
-      return;
-    }
-
-    setIsLoggingIn(true);
-    try {
-      const supabase = createClient();
-      const { data, error: authErr } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authErr || !data.user) {
-        setLoginError(authErr?.message || 'Invalid email or password.');
-        setIsLoggingIn(false);
-        return;
-      }
-
-      // Fetch profile and transition immediately
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, name, email, role, shift_start_time, designation')
-        .eq('id', data.user.id)
-        .maybeSingle();
-
-      setSession({
-        user: { id: data.user.id, email: data.user.email },
-        profile: profile || {
-          id: data.user.id,
-          name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'Staff Member',
-          email: data.user.email,
-          role: 'staff',
-          shift_start_time: '08:00:00',
-          designation: null,
-        },
-      });
-    } catch (err: unknown) {
-      console.error('Login error:', err);
-      setLoginError(err instanceof Error ? err.message : 'An unexpected error occurred during login.');
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  // Quick Demo Helper
-  const handleFillDemoTeacher = () => {
-    setLoginEmail('teacher@attendance.app');
-    setLoginPassword('StaffPassword123!');
-    setLoginError(null);
-  };
-
-  const handleFillDemoAdmin = () => {
-    setLoginEmail('admin@attendance.app');
-    setLoginPassword('AdminPassword123!');
-    setLoginError(null);
-  };
-
-  // 3. Handle Sign Out
+  // 2. Handle Sign Out
   const handleSignOut = async () => {
     stopScanner();
     const supabase = createClient();
     await supabase.auth.signOut();
-    setSession(null);
-    setResult(null);
-    setError(null);
+    router.push('/login');
+    router.refresh();
   };
 
-  // 4. Check-in submission handler (Server Action strictly extracts teacher_id from session cookie)
+  // 3. Token Check-In Handler with Device Lock Verification
   const handleTokenDetected = useCallback(
     async (rawText: string) => {
       if (isVerifyingRef.current) return;
@@ -216,7 +151,7 @@ export default function ScanPage() {
       setIsSubmitting(true);
       setError(null);
 
-      // Stop camera stream during verification
+      // Stop camera during verification
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
@@ -228,11 +163,10 @@ export default function ScanPage() {
       setIsScanning(false);
 
       try {
-        // Step 1: Submit token via Server Action
-        // NOTE: teacherId is strictly NOT passed from the client.
-        // The server extracts teacher_id from the authenticated user's session cookie.
+        const currentDeviceId = deviceId || getOrCreateDeviceId();
         const verifyRes = await submitCheckInAction({
           token: rawText,
+          device_id: currentDeviceId,
         });
 
         if (!verifyRes.success) {
@@ -246,9 +180,15 @@ export default function ScanPage() {
               ? verifyRes.error.details
               : verifyRes.details;
 
+          const isDeviceLocked =
+            Boolean(verifyRes.deviceLocked) ||
+            errorMessage.toLowerCase().includes('unauthorized device') ||
+            errorMessage.toLowerCase().includes('locked to another phone');
+
           setError({
             message: errorMessage,
             details: errorDetails,
+            deviceLocked: isDeviceLocked,
           });
           setIsSubmitting(false);
           isVerifyingRef.current = false;
@@ -282,6 +222,9 @@ export default function ScanPage() {
           status: verifyRes.status || 'present',
           alreadyCheckedIn: false,
         });
+
+        // Refresh session profile to reflect bound device state if first time
+        loadSession();
       } catch (err: unknown) {
         console.error('Submission catch block error:', err);
         const errObj: CheckInError = {
@@ -297,10 +240,10 @@ export default function ScanPage() {
         isVerifyingRef.current = false;
       }
     },
-    [session]
+    [deviceId, session, loadSession]
   );
 
-  // 5. Camera Controls
+  // 4. Camera Controls
   const startScanner = useCallback(async () => {
     setCameraError(null);
     setError(null);
@@ -317,7 +260,7 @@ export default function ScanPage() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
       } catch (err: unknown) {
-        console.error('All camera access failed:', err);
+        console.error('Camera access failed:', err);
         setCameraError(
           err instanceof Error
             ? err.message
@@ -434,11 +377,8 @@ export default function ScanPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col justify-between font-sans">
-      {/* ========================================================================= */}
-      {/* 1. TOP NAVIGATION BAR                                                     */}
-      {/* ========================================================================= */}
+      {/* 1. TOP NAVIGATION BAR */}
       <nav className="border-b bg-white px-6 py-3 flex items-center justify-between shadow-sm sticky top-0 z-20">
-        {/* Left: Brand Logo + Text + Tiny SCANNER Badge */}
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600">
             <Building2 size={20} className="text-teal-600" />
@@ -453,7 +393,7 @@ export default function ScanPage() {
               </span>
             </div>
             <p className="text-[11px] text-gray-500 font-normal">
-              Staff Attendance Verification Portal
+              Cryptographic Staff Attendance Verification
             </p>
           </div>
         </div>
@@ -476,142 +416,26 @@ export default function ScanPage() {
         </div>
       </nav>
 
-      {/* ========================================================================= */}
-      {/* 2. MAIN CONTAINER                                                         */}
-      {/* ========================================================================= */}
+      {/* 2. MAIN CONTAINER */}
       <main className="flex-1 max-w-md mx-auto w-full p-4 sm:p-6 my-auto space-y-4">
         {/* Loading Session View */}
         {loadingSession ? (
           <div className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
             <RefreshCw size={24} className="animate-spin mx-auto text-teal-600 mb-3" />
             <p className="text-xs font-semibold text-gray-700">
-              Verifying active staff session...
+              Verifying active staff session &amp; device binding...
             </p>
           </div>
         ) : !session ? (
-          /* ========================================================================= */
-          /* 3. SUPABASE EMAIL/PASSWORD LOGIN SCREEN (When unauthenticated)             */
-          /* ========================================================================= */
-          <div className="bg-white border border-gray-200 rounded-xl p-6 sm:p-8 shadow-sm">
-            {/* Header */}
-            <div className="text-center mb-6">
-              <div className="w-12 h-12 bg-teal-50 border border-teal-200 rounded-full flex items-center justify-center mx-auto text-teal-600 mb-3 shadow-sm">
-                <Lock size={22} />
-              </div>
-              <h1 className="text-lg font-bold text-gray-900">
-                Staff Check-In Login
-              </h1>
-              <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
-                Sign in with your registered email and password to activate your personalized scanner with cryptographic identity proof.
-              </p>
-            </div>
-
-            {/* Error Banner */}
-            {loginError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-start gap-2.5">
-                <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <div className="font-semibold text-red-800">Authentication Failed</div>
-                  <div className="text-red-700 text-[11px] mt-0.5">{loginError}</div>
-                </div>
-              </div>
-            )}
-
-            {/* Login Form */}
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Staff Email Address
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <Mail size={15} />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="e.g. teacher@attendance.app"
-                    className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <Lock size={15} />
-                  </div>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-9 pr-10 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition"
-                  >
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoggingIn}
-                className="w-full py-2.5 bg-black hover:bg-gray-800 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition shadow-sm flex items-center justify-center gap-2 cursor-pointer mt-2"
-              >
-                {isLoggingIn ? (
-                  <>
-                    <RefreshCw size={14} className="animate-spin" />
-                    <span>Signing In...</span>
-                  </>
-                ) : (
-                  <>
-                    <Lock size={14} />
-                    <span>Sign In to Scanner</span>
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* Quick Demo Credentials helper */}
-            <div className="mt-5 pt-4 border-t border-gray-100">
-              <span className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2 text-center">
-                Quick Demo Credentials
-              </span>
-              <div className="grid grid-cols-1 gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleFillDemoTeacher}
-                  className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition text-[11px] text-gray-700 flex items-center justify-between"
-                >
-                  <span className="font-semibold text-gray-900">Teacher: Prof. Sarah Connor</span>
-                  <span className="text-gray-400 font-mono text-[10px]">teacher@attendance.app</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleFillDemoAdmin}
-                  className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition text-[11px] text-gray-700 flex items-center justify-between"
-                >
-                  <span className="font-semibold text-gray-900">Principal: Admin</span>
-                  <span className="text-gray-400 font-mono text-[10px]">admin@attendance.app</span>
-                </button>
-              </div>
-            </div>
+          /* Redirecting to login fallback */
+          <div className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
+            <RefreshCw size={24} className="animate-spin mx-auto text-gray-400 mb-3" />
+            <p className="text-xs font-semibold text-gray-700">
+              Authentication required. Redirecting to login...
+            </p>
           </div>
         ) : (
-          /* ========================================================================= */
-          /* 4. AUTHENTICATED SCANNER VIEW                                             */
-          /* ========================================================================= */
+          /* 3. AUTHENTICATED SCANNER VIEW */
           <>
             {/* Success Confirmation Card */}
             {result?.success ? (
@@ -643,6 +467,13 @@ export default function ScanPage() {
                     </span>
                   </div>
                   <div className="flex justify-between text-xs">
+                    <span className="text-gray-500">Device Binding:</span>
+                    <span className="inline-flex items-center gap-1 font-mono font-semibold text-teal-700 text-[11px]">
+                      <Smartphone size={13} />
+                      {deviceId ? `••••${deviceId.slice(-4).startsWith('-') ? deviceId.slice(-4) : `-${deviceId.slice(-4)}`}` : 'Hardware Locked'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
                     <span className="text-gray-500">Recorded Status:</span>
                     <span
                       className={`font-bold uppercase ${
@@ -652,14 +483,6 @@ export default function ScanPage() {
                       {result.status}
                     </span>
                   </div>
-                  {result.alreadyCheckedIn && (
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-500">Attendance State:</span>
-                      <span className="text-green-700 font-semibold">
-                        Already Checked In Today
-                      </span>
-                    </div>
-                  )}
                   {result.checkInTime && (
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Timestamp:</span>
@@ -696,7 +519,7 @@ export default function ScanPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Authenticated Staff Profile Card (Cryptographically Bound) */}
+                {/* Authenticated Staff Profile Card (Cryptographically & Device Bound) */}
                 <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm">
                   <div className="flex items-start justify-between gap-3 border-b border-gray-100 pb-3 mb-3">
                     <div className="flex items-center gap-3">
@@ -721,51 +544,69 @@ export default function ScanPage() {
                     {/* Verified Session Badge */}
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-50 text-green-700 border border-green-200">
                       <ShieldCheck size={12} className="text-green-600" />
-                      Verified
+                      Session Active
                     </span>
                   </div>
 
-                  {/* Shift & Role Details */}
-                  <div className="flex items-center justify-between text-xs text-gray-600">
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-mono text-gray-600">
-                        <Clock size={12} className="text-gray-400" />
-                        Shift: {formatShiftTime(session.profile.shift_start_time)}
-                      </span>
-                      {session.profile.designation && (
-                        <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-gray-500">
-                          <Briefcase size={12} className="text-gray-400" />
-                          {session.profile.designation}
+                  {/* Device Lock & Shift Details */}
+                  <div className="space-y-2 text-xs text-gray-600">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-gray-600">
+                          <Clock size={12} className="text-gray-400" />
+                          Shift: {formatShiftTime(session.profile.shift_start_time)}
                         </span>
-                      )}
+                        {session.profile.designation && (
+                          <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-gray-500">
+                            <Briefcase size={12} className="text-gray-400" />
+                            {session.profile.designation}
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={handleSignOut}
+                        className="text-[11px] text-gray-500 hover:text-red-600 flex items-center gap-1 transition cursor-pointer"
+                        title="Sign out of scanner"
+                      >
+                        <LogOut size={12} />
+                        <span>Sign Out</span>
+                      </button>
                     </div>
 
-                    <button
-                      onClick={handleSignOut}
-                      className="text-[11px] text-gray-500 hover:text-red-600 flex items-center gap-1 transition"
-                      title="Sign out of scanner"
-                    >
-                      <LogOut size={12} />
-                      <span>Sign Out</span>
-                    </button>
+                    {/* Hardware Device Fingerprint Badge */}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100/80 text-[11px]">
+                      <span className="inline-flex items-center gap-1.5 text-gray-500">
+                        <Smartphone size={13} className="text-teal-600" />
+                        <span>Device Lock:</span>
+                      </span>
+                      <span className="font-mono text-[10px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded border border-gray-200">
+                        {session.profile.registered_device_id
+                          ? `Locked (••••${session.profile.registered_device_id.slice(-4).startsWith('-') ? session.profile.registered_device_id.slice(-4) : `-${session.profile.registered_device_id.slice(-4)}`})`
+                          : 'First Login: Will Bind on Check-In'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Green Banner: Already Checked In Today */}
-                {alreadyCheckedInNotice && !error && (
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 flex items-start gap-3 shadow-sm">
-                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold text-green-900">Already Checked In Today</div>
-                      <p className="text-green-700 text-[11px] mt-0.5">
-                        Your attendance has already been logged. Further scans will not overwrite your recorded time.
+                {/* Unauthorized Device Lock Alert (Scenario C) */}
+                {error && error.deviceLocked && (
+                  <div className="p-4 bg-red-50 border border-red-300 rounded-xl text-xs text-red-800 flex items-start gap-3 shadow-sm">
+                    <ShieldAlert className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="font-bold text-red-900 text-sm">Unauthorized Device</div>
+                      <p className="text-red-800 mt-1 font-medium leading-relaxed">
+                        {error.message}
                       </p>
+                      <div className="mt-3 p-2.5 bg-red-100/70 rounded-lg border border-red-200 text-[11px] text-red-900 font-normal">
+                        Security Notice: Staff accounts are cryptographically bound to a single approved mobile device. To transfer your account to a new phone, request a device reset from the Principal.
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {/* Red Banner: Error Alert */}
-                {error && (
+                {/* Generic Check-In Error Alert */}
+                {error && !error.deviceLocked && (
                   <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-3 shadow-sm">
                     <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                     <div className="flex-1">
@@ -776,6 +617,19 @@ export default function ScanPage() {
                           {error.details}
                         </pre>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Green Banner: Already Checked In Today */}
+                {alreadyCheckedInNotice && !error && (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800 flex items-start gap-3 shadow-sm">
+                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-green-900">Already Checked In Today</div>
+                      <p className="text-green-700 text-[11px] mt-0.5">
+                        Your attendance has already been logged. Further scans will not overwrite your recorded time.
+                      </p>
                     </div>
                   </div>
                 )}
@@ -820,10 +674,10 @@ export default function ScanPage() {
                       <div className="absolute inset-0 bg-white/80 backdrop-blur-xs flex flex-col items-center justify-center text-center p-4">
                         <RefreshCw className="w-8 h-8 text-black animate-spin mb-2" />
                         <span className="text-xs font-bold text-gray-900">
-                          Verifying Authenticated Session...
+                          Verifying Device &amp; Session...
                         </span>
                         <span className="text-[10px] text-gray-500 mt-0.5">
-                          Cryptographically binding attendance record to {session.profile.name}
+                          Cryptographically binding record to {session.profile.name}
                         </span>
                       </div>
                     )}
@@ -842,7 +696,7 @@ export default function ScanPage() {
                     ) : (
                       <button
                         onClick={stopScanner}
-                        className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold text-xs rounded-lg transition flex items-center justify-center gap-2"
+                        className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold text-xs rounded-lg transition flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <CameraOff size={14} />
                         <span>Stop Camera</span>
@@ -871,7 +725,7 @@ export default function ScanPage() {
                     <button
                       type="submit"
                       disabled={isSubmitting || manualCode.length < 6}
-                      className="px-4 py-2 bg-black hover:bg-gray-800 disabled:opacity-40 text-white font-semibold text-xs rounded-lg transition shadow-sm"
+                      className="px-4 py-2 bg-black hover:bg-gray-800 disabled:opacity-40 text-white font-semibold text-xs rounded-lg transition shadow-sm cursor-pointer"
                     >
                       Verify
                     </button>
@@ -883,13 +737,11 @@ export default function ScanPage() {
         )}
       </main>
 
-      {/* ========================================================================= */}
-      {/* 5. FOOTER NOTICE                                                          */}
-      {/* ========================================================================= */}
+      {/* 4. FOOTER NOTICE */}
       <footer className="p-4 text-center border-t border-gray-200 bg-white">
         <p className="text-[10px] text-gray-400 flex items-center justify-center gap-1">
           <ShieldCheck className="w-3 h-3 text-teal-600" />
-          Cryptographically signed session check-in &bull; Anti-Cheat TOTP Protocol
+          Cryptographic Device Binding &bull; Anti-Cheat TOTP Protocol
         </p>
       </footer>
     </div>

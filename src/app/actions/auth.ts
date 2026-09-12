@@ -42,36 +42,27 @@ export async function signInAction(formData: FormData): Promise<AuthActionResult
     }
 
     // Verify role in profiles table
-    const { data: profile, error: profileError } = await supabase
+    let userRole = 'staff';
+    const { data: profile } = await supabase
       .from('profiles')
       .select('id, name, role')
       .eq('id', authData.user.id)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !profile) {
-      await supabase.auth.signOut();
-      return {
-        success: false,
-        error: 'User profile not found. Please contact support.',
-      };
+    if (profile?.role) {
+      userRole = profile.role;
     }
 
-    if (profile.role !== 'admin') {
-      await supabase.auth.signOut();
-      return {
-        success: false,
-        error: 'Access restricted: Only administrator accounts can access the principal dashboard.',
-      };
-    }
+    const redirectTo = userRole === 'admin' ? '/dashboard' : '/scan';
 
     return {
       success: true,
-      redirectTo: '/dashboard',
+      redirectTo,
       user: {
         id: authData.user.id,
         email: authData.user.email || email,
-        name: profile.name,
-        role: profile.role,
+        name: profile?.name || authData.user.user_metadata?.name || email.split('@')[0],
+        role: userRole,
       },
     };
   } catch (err: unknown) {

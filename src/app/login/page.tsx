@@ -1,8 +1,19 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useTransition, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ShieldCheck, Lock, Mail, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
+import {
+  Building2,
+  Lock,
+  Mail,
+  ArrowRight,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  GraduationCap,
+  UserCheck,
+} from 'lucide-react';
 import Link from 'next/link';
 import { signInAction } from '@/app/actions/auth';
 
@@ -10,14 +21,21 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(
     searchParams.get('error') === 'unauthorized'
-      ? 'Access restricted: Only administrator accounts can access the principal dashboard.'
+      ? 'Access restricted: Please sign in with an authorized account.'
       : null
   );
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  const handleFillDemoStaff = () => {
+    setEmail('teacher@attendance.app');
+    setPassword('StaffPassword123!');
+    setError(null);
+  };
 
   const handleFillDemoAdmin = () => {
     setEmail('admin@attendance.app');
@@ -38,49 +56,65 @@ function LoginForm() {
         return;
       }
 
-      router.push(res.redirectTo || '/dashboard');
+      router.push(res.redirectTo || '/scan');
       router.refresh();
     });
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 sm:p-6 lg:p-8 font-sans">
-      {/* Top Bar */}
-      <header className="flex items-center justify-between max-w-md mx-auto w-full pt-2">
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col justify-between font-sans">
+      {/* 1. TOP NAVIGATION BAR */}
+      <header className="border-b bg-white px-6 py-3 flex items-center justify-between shadow-sm sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600">
+            <Building2 size={20} className="text-teal-600" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-gray-900 tracking-tight">
+                Attendance Hub
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 border border-teal-200">
+                AUTH PORTAL
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-500 font-normal">
+              Unified Staff & Administrator Access
+            </p>
+          </div>
+        </div>
+
         <Link
           href="/"
-          className="text-xs font-semibold text-slate-400 hover:text-white transition flex items-center gap-1.5"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 transition shadow-sm"
         >
           &larr; Back to App
         </Link>
-        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-          <ShieldCheck className="w-3 h-3" /> Supabase RBAC
-        </span>
       </header>
 
-      {/* Main Card */}
-      <main className="max-w-md mx-auto w-full my-auto py-8">
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+      {/* 2. MAIN LOGIN CONTAINER */}
+      <main className="flex-1 max-w-md mx-auto w-full p-4 sm:p-6 my-auto flex flex-col justify-center">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 sm:p-8 shadow-sm">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-center mx-auto text-emerald-400 mb-4 shadow-lg shadow-emerald-500/10">
-              <Lock className="w-7 h-7" />
+          <div className="text-center mb-6">
+            <div className="w-12 h-12 bg-teal-50 border border-teal-200 rounded-full flex items-center justify-center mx-auto text-teal-600 mb-3 shadow-sm">
+              <Lock size={22} />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white mb-1">
-              Administrator Login
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+              Sign In to Your Account
             </h1>
-            <p className="text-xs text-slate-400">
-              Sign in to manage staff attendance, view live records, and configure shifts.
+            <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
+              Enter your credentials to access the staff check-in scanner or principal administration dashboard.
             </p>
           </div>
 
           {/* Error Banner */}
           {error && (
-            <div className="mb-6 p-4 bg-rose-950/40 border border-rose-500/40 rounded-2xl text-xs text-rose-300 flex items-start gap-3 shadow-lg">
-              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-              <div className="flex-1 text-left">
-                <div className="font-bold text-rose-200">Authentication Failed</div>
-                <div className="text-rose-300/90 mt-0.5">{error}</div>
+            <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-start gap-2.5">
+              <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <div className="font-semibold text-red-800">Authentication Failed</div>
+                <div className="text-red-700 text-[11px] mt-0.5">{error}</div>
               </div>
             </div>
           )}
@@ -90,12 +124,14 @@ function LoginForm() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-xs font-semibold text-slate-300 mb-1.5"
+                className="block text-xs font-semibold text-gray-700 mb-1.5"
               >
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  <Mail size={15} />
+                </div>
                 <input
                   id="email"
                   name="email"
@@ -104,8 +140,8 @@ function LoginForm() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@attendance.app"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition"
+                  placeholder="e.g. teacher@attendance.app"
+                  className="w-full pl-9 pr-3 py-2.5 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
                 />
               </div>
             </div>
@@ -113,62 +149,110 @@ function LoginForm() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-xs font-semibold text-slate-300 mb-1.5"
+                className="block text-xs font-semibold text-gray-700 mb-1.5"
               >
                 Password
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  <Lock size={15} />
+                </div>
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition"
+                  className="w-full pl-9 pr-10 py-2.5 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={isPending}
-              className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2 mt-2"
+              className="w-full py-2.5 bg-black hover:bg-gray-800 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition shadow-sm flex items-center justify-center gap-2 cursor-pointer mt-2"
             >
               {isPending ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                  Verifying Credentials...
+                  <RefreshCw size={14} className="animate-spin" />
+                  <span>Verifying Credentials...</span>
                 </>
               ) : (
                 <>
-                  Sign In to Dashboard
-                  <ArrowRight className="w-4 h-4" />
+                  <span>Sign In</span>
+                  <ArrowRight size={14} />
                 </>
               )}
             </button>
           </form>
 
-          {/* Demo Credentials Quick-Fill */}
-          <div className="mt-6 pt-5 border-t border-slate-800/80 text-center">
-            <button
-              type="button"
-              onClick={handleFillDemoAdmin}
-              className="inline-flex items-center gap-1.5 text-[11px] text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 px-3 py-1.5 rounded-xl transition"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Fill Demo Administrator Credentials
-            </button>
+          {/* Quick Demo Access */}
+          <div className="mt-6 pt-5 border-t border-gray-100">
+            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5 text-center">
+              Quick Demo Credentials
+            </span>
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                type="button"
+                onClick={handleFillDemoStaff}
+                className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition text-[11px] text-gray-700 flex items-center justify-between group cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <GraduationCap size={14} className="text-teal-600" />
+                  <div>
+                    <span className="font-semibold text-gray-900 group-hover:text-black">
+                      Staff Portal (/scan)
+                    </span>
+                    <span className="block text-[10px] text-gray-500 font-mono">
+                      teacher@attendance.app
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                  Staff Role
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleFillDemoAdmin}
+                className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition text-[11px] text-gray-700 flex items-center justify-between group cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <UserCheck size={14} className="text-green-600" />
+                  <div>
+                    <span className="font-semibold text-gray-900 group-hover:text-black">
+                      Admin Dashboard (/dashboard)
+                    </span>
+                    <span className="block text-[10px] text-gray-500 font-mono">
+                      admin@attendance.app
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">
+                  Admin Role
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="text-center text-[11px] text-slate-500 max-w-md mx-auto w-full pb-2">
-        Attendance Web App &bull; Principal Access Portal
+      {/* 3. FOOTER */}
+      <footer className="text-center text-[11px] text-gray-500 max-w-md mx-auto w-full py-4">
+        Attendance Web App &bull; Cryptographic Device Lock &amp; RBAC
       </footer>
     </div>
   );
@@ -178,7 +262,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-950 text-slate-400 flex items-center justify-center text-xs">
+        <div className="min-h-screen bg-gray-50 text-gray-500 flex items-center justify-center text-xs">
           Loading portal...
         </div>
       }
