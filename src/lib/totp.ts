@@ -86,8 +86,8 @@ export function verifyKioskToken(
   const now = Math.floor(Date.now() / 1000);
   const currentStep = Math.floor(now / timeStepSeconds);
 
-  // Check current window, past 2 windows (60s grace), and immediate future window (clock drift)
-  for (const step of [currentStep, currentStep - 1, currentStep - 2, currentStep + 1]) {
+  // Check current window, past 3 windows (90s grace for human scanning & network), and immediate future window (clock drift)
+  for (const step of [currentStep, currentStep - 1, currentStep - 2, currentStep - 3, currentStep + 1]) {
     const buffer = Buffer.alloc(8);
     buffer.writeBigInt64BE(BigInt(step));
 

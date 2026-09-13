@@ -38,17 +38,27 @@ export default function KioskScreen({ initialToken, company }: KioskScreenProps)
   const [isFullscreen, setIsFullscreen] = useState(false);
   const fetchLock = useRef(false);
 
-  // Sync token from Server Action scoped to organization company_id
+  // Sync token from API route scoped to organization company_id (with fallback to Server Action)
   const refreshToken = useCallback(async () => {
     if (fetchLock.current) return;
     fetchLock.current = true;
     setIsRefreshing(true);
     try {
-      const data = await getKioskTokenAction(company?.id);
+      const companyParam = company?.id ? `?companyId=${encodeURIComponent(company.id)}&_t=${Date.now()}` : `?_t=${Date.now()}`;
+      const res = await fetch(`/api/kiosk/token${companyParam}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
       setTokenData(data);
-      setSecondsLeft(data.remainingSeconds);
+      setSecondsLeft(data.remainingSeconds || 30);
     } catch (err) {
-      console.error('Failed to sync kiosk token:', err);
+      console.warn('API token sync failed, falling back to server action:', err);
+      try {
+        const data = await getKioskTokenAction(company?.id);
+        setTokenData(data);
+        setSecondsLeft(data.remainingSeconds || 30);
+      } catch (saErr) {
+        console.error('Server action fallback also failed:', saErr);
+      }
     } finally {
       setIsRefreshing(false);
       fetchLock.current = false;
@@ -275,11 +285,23 @@ export default function KioskScreen({ initialToken, company }: KioskScreenProps)
           {/* Human-Readable Code (Matching Card 1 Slate Styling) */}
           <div className="w-full bg-slate-400/20 text-slate-800 rounded-xl px-4 py-2.5 border border-slate-300/40 text-xs flex items-center justify-between">
             <span className="font-semibold text-slate-700">One-Time Code:</span>
-            <span className="text-base font-mono font-bold tracking-widest text-teal-700 bg-white px-2.5 py-0.5 rounded-lg border border-gray-200 shadow-sm">
-              {tokenData
-                ? `${tokenData.token.slice(0, 3)} ${tokenData.token.slice(3)}`
-                : '------'}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-base font-mono font-bold tracking-widest text-teal-700 bg-white px-2.5 py-0.5 rounded-lg border border-gray-200 shadow-sm">
+                {tokenData
+                  ? `${tokenData.token.slice(0, 3)} ${tokenData.token.slice(3)}`
+                  : '------'}
+              </span>
+              <button
+                type="button"
+                onClick={() => refreshToken()}
+                disabled={isRefreshing}
+                title="Force refresh active QR code"
+                aria-label="Force refresh active QR code"
+                className="p-1 rounded-md text-gray-600 hover:text-teal-700 hover:bg-white/80 transition disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+              </button>
+            </div>
           </div>
 
           {/* Countdown Ring */}

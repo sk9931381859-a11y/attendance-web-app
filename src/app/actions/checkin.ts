@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { verifyKioskToken } from '@/lib/totp';
+import { revalidatePath } from 'next/cache';
 
 const ON_TIME_GRACE_MINUTES = 10;
 
@@ -22,7 +23,7 @@ export interface CheckInErrorObject {
 export interface CheckInResponse {
   success: boolean;
   message?: string;
-  status?: 'present' | 'late';
+  status?: 'present' | 'late' | 'absent';
   checkInTime?: string;
   teacherName?: string;
   teacherEmail?: string;
@@ -246,10 +247,35 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
       .maybeSingle();
 
     if (existingLog) {
+      if (existingLog.status === 'absent') {
+        // Teacher was auto-marked absent at 09:00 AM by pg_cron, but has arrived late
+        const { error: updateError } = await supabase
+          .from('attendance_logs')
+          .update({
+            status: 'late',
+            check_in_time: now.toISOString(),
+          })
+          .eq('id', existingLog.id);
+
+        if (!updateError) {
+          revalidatePath('/dashboard');
+          revalidatePath('/dashboard/manage');
+          return {
+            success: true,
+            message: 'Check-in recorded as Late (previously marked absent at 09:00 AM).',
+            status: 'late',
+            checkInTime: now.toISOString(),
+            teacherName: effectiveProfile.name,
+            teacherEmail: effectiveProfile.email || user.email,
+            alreadyCheckedIn: false,
+          };
+        }
+      }
+
       return {
         success: true,
         message: 'Already Checked In Today',
-        status: existingLog.status as 'present' | 'late',
+        status: existingLog.status as 'present' | 'late' | 'absent',
         checkInTime: existingLog.check_in_time,
         teacherName: effectiveProfile.name,
         teacherEmail: effectiveProfile.email || user.email,
