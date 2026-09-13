@@ -1,6 +1,7 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 
@@ -35,6 +36,7 @@ export interface StaffActionResult {
   success: boolean;
   error?: string;
   staff?: StaffMember;
+  generatedPassword?: string;
 }
 
 export interface RegisterStaffInput {
@@ -70,31 +72,65 @@ function getAdminClient() {
 
 /**
  * Ensures the requesting user is an active administrator.
+ * Uses @supabase/ssr with cookies() to verify the active session,
+ * and confirms the caller has role === 'admin' in public.profiles.
  */
 async function verifyAdminRole() {
-  const supabase = createClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const cookieStore = cookies();
+  const rawUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/\/+$/, '').replace(/\/rest\/v1\/?$/, '');
+  const rawAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
 
-  if (userError || !user) {
-    throw new Error('Authentication required.');
+  if (!rawUrl || !rawAnonKey) {
+    throw new Error('Missing Supabase URL or Anon Key configuration.');
   }
 
-  const { data: profile, error: profError } = await supabase
+  const supabase = createServerClient(rawUrl, rawAnonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        } catch {
+          // Ignored in server context
+        }
+      },
+    },
+  });
+
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  let user = session?.user;
+  if (sessionError || !session || !user) {
+    const { data: userData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+    if (userData?.user) {
+      user = userData.user;
+    } else {
+      throw new Error('Authentication required.');
+    }
+  }
+
+  const adminClient = getAdminClient();
+
+  const { data: profile, error: profError } = await adminClient
     .from('profiles')
     .select('id, role, company_id')
     .eq('id', user.id)
     .single();
 
-  if (profError || profile?.role !== 'admin') {
+  if (profError || !profile || profile.role !== 'admin') {
     throw new Error('Unauthorized: Administrator role required.');
   }
 
   const companyId = profile.company_id || '11111111-1111-1111-1111-111111111111';
 
-  return { supabase, user, profile, companyId };
+  return { supabase, user, profile, companyId, adminClient };
 }
 
 /**
@@ -132,9 +168,75 @@ function normalizeTime(timeStr?: string): string {
  */
 export async function registerStaffAction(data: RegisterStaffInput): Promise<StaffActionResult> {
   try {
-    const { companyId } = await verifyAdminRole();
-    const adminClient = getAdminClient();
+    // 1. Verify the Caller: Use @supabase/ssr with cookies() from next/headers to verify the active session
+    const cookieStore = cookies();
+    const rawUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/\/+$/, '').replace(/\/rest\/v1\/?$/, '');
+    const rawAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim();
 
+    if (!rawUrl || !rawAnonKey) {
+      throw new Error('Missing Supabase URL or Anon Key configuration.');
+    }
+
+    const supabase = createServerClient(rawUrl, rawAnonKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Ignored in server context
+          }
+        },
+      },
+    });
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    let callerUser = session?.user;
+    if (sessionError || !session || !callerUser) {
+      const { data: userData } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+      if (userData?.user) {
+        callerUser = userData.user;
+      } else {
+        throw new Error('Authentication required.');
+      }
+    }
+
+    // 2. Instantiate Admin Client: Create a separate supabaseAdmin client using @supabase/supabase-js
+    // passing process.env.NEXT_PUBLIC_SUPABASE_URL and process.env.SUPABASE_SERVICE_ROLE_KEY
+    const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+    if (!serviceRoleKey) {
+      throw new Error('Missing Supabase Service Role Key configuration.');
+    }
+
+    const supabaseAdmin = createSupabaseClient(rawUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // Query profiles to confirm the caller has role === 'admin'. If not, throw an unauthorized error.
+    const { data: callerProfile, error: profileCheckError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, role, company_id')
+      .eq('id', callerUser.id)
+      .single();
+
+    if (profileCheckError || !callerProfile || callerProfile.role !== 'admin') {
+      throw new Error('Unauthorized: Administrator role required.');
+    }
+
+    const companyId = callerProfile.company_id || '11111111-1111-1111-1111-111111111111';
+
+    // 3. Execute Transaction
     const name = data.name?.trim();
     if (!name || name.length < 2) {
       return { success: false, error: 'A valid staff name (minimum 2 characters) is required.' };
@@ -157,8 +259,8 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
       ? data.working_days
       : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-    // 1. Create Supabase Auth User via service role key with company_id metadata
-    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+    // 3a. Use supabaseAdmin.auth.admin.createUser(...) to create the auth account.
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -171,15 +273,21 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
     });
 
     if (authError || !authData?.user) {
-      if (authError?.message?.toLowerCase().includes('already registered') || authError?.message?.toLowerCase().includes('already exists')) {
+      if (
+        authError?.message?.toLowerCase().includes('already registered') ||
+        authError?.message?.toLowerCase().includes('already exists')
+      ) {
         return { success: false, error: `A staff account with email "${email}" already exists.` };
       }
       return { success: false, error: authError?.message || 'Failed to create staff authentication account.' };
     }
 
+    // 3b. Extract the returned user.id.
     const newUserId = authData.user.id;
 
-    // 2. Insert returned user.id and details into public.profiles table scoped to Principal's company_id
+    // 3c. Use the same supabaseAdmin client to insert the new user data
+    // (Name, Designation, Shift, Salary, Working Days, and the Principal's company_id)
+    // into public.profiles (bypasses RLS safely for this admin action).
     const profilePayload = {
       id: newUserId,
       name,
@@ -192,7 +300,7 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
       company_id: companyId,
     };
 
-    const { data: insertedProfile, error: profileError } = await adminClient
+    const { data: insertedProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .upsert(profilePayload)
       .select()
