@@ -69,13 +69,30 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
   // 1. Verify TOTP token from Kiosk QR code
   let cleanToken = token.trim();
   let scannedCompanyId: string | undefined = undefined;
+
   try {
     if (cleanToken.startsWith('{')) {
       const parsed = JSON.parse(cleanToken);
-      if (parsed.token) cleanToken = parsed.token;
+      if (parsed.token) cleanToken = String(parsed.token).trim();
       scannedCompanyId = parsed.company_id || parsed.companyId || undefined;
+    } else if (cleanToken.includes(':')) {
+      // Handle colon-separated payloads like ATTENDANCE_TOTP:123456:company_id
+      const parts = cleanToken.split(':');
+      const otpCandidate = parts.find((p) => /^\d{6}$/.test(p.trim()));
+      if (otpCandidate) {
+        cleanToken = otpCandidate.trim();
+      }
+      const uuidCandidate = parts.find((p) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.trim())
+      );
+      if (uuidCandidate) {
+        scannedCompanyId = uuidCandidate.trim();
+      }
     }
   } catch {}
+
+  // Strip non-digit characters from manual or scanned code
+  cleanToken = cleanToken.replace(/\D/g, '');
 
   const isValidToken = verifyKioskToken(cleanToken);
   if (!isValidToken) {

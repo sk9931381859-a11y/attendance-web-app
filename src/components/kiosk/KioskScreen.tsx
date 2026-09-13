@@ -84,20 +84,47 @@ export default function KioskScreen({ initialToken, company }: KioskScreenProps)
     return () => clearInterval(clockTimer);
   }, [refreshToken, tokenData]);
 
-  // Exact countdown ticker
+  // Exact wall-clock countdown ticker & automatic resynchronization
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          refreshToken();
-          return 30;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    const updateCountdown = () => {
+      if (!tokenData?.expiresAt) {
+        return;
+      }
+      const now = Date.now();
+      const msRemaining = tokenData.expiresAt - now;
+      const secRemaining = Math.max(0, Math.ceil(msRemaining / 1000));
+      setSecondsLeft(secRemaining);
 
-    return () => clearInterval(timer);
-  }, [refreshToken]);
+      if (msRemaining <= 0) {
+        refreshToken();
+      }
+    };
+
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 500);
+
+    // Resync immediately when user switches back to this tab / window
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        const now = Date.now();
+        const msRemaining = (tokenData?.expiresAt || 0) - now;
+        if (msRemaining <= 1000) {
+          refreshToken();
+        } else {
+          updateCountdown();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
+  }, [refreshToken, tokenData?.expiresAt]);
 
   // Fullscreen toggle
   const toggleFullscreen = () => {

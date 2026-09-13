@@ -72,19 +72,22 @@ export function generateKioskToken(
 }
 
 /**
- * Validates a scanned TOTP token against current and immediate past time windows (30s grace).
+ * Validates a scanned TOTP token against current, past (60s grace for human scanning & network),
+ * and future (clock skew drift) time windows.
  */
 export function verifyKioskToken(
   token: string,
   secret = DEFAULT_SECRET,
   timeStepSeconds = 30
 ): boolean {
-  if (!token || token.length !== 6) return false;
+  const sanitized = (token || '').replace(/\D/g, '');
+  if (sanitized.length !== 6) return false;
 
   const now = Math.floor(Date.now() / 1000);
   const currentStep = Math.floor(now / timeStepSeconds);
 
-  for (const step of [currentStep, currentStep - 1]) {
+  // Check current window, past 2 windows (60s grace), and immediate future window (clock drift)
+  for (const step of [currentStep, currentStep - 1, currentStep - 2, currentStep + 1]) {
     const buffer = Buffer.alloc(8);
     buffer.writeBigInt64BE(BigInt(step));
 
@@ -100,7 +103,7 @@ export function verifyKioskToken(
       (digest[offset + 3] & 0xff);
 
     const expectedOtp = (binary % 1000000).toString().padStart(6, '0');
-    if (expectedOtp === token) {
+    if (expectedOtp === sanitized) {
       return true;
     }
   }
