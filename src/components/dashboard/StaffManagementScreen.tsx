@@ -28,16 +28,21 @@ import {
   ChevronUp,
   Plus,
   User,
+  Lock,
+  Eye,
+  EyeOff,
+  Sparkles,
+  Filter,
 } from 'lucide-react';
 import {
   StaffMember,
   AttendanceLogRecord,
-  createStaffAction,
+  registerStaffAction,
   updateStaffAction,
   deleteStaffAction,
   getStaffListAction,
   getAttendanceLogsAction,
-} from '@/app/actions/staff';
+} from '@/app/dashboard/manage/actions';
 import { signOutAction } from '@/app/actions/auth';
 
 const ALL_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -61,11 +66,13 @@ export default function StaffManagementScreen({
 
   // Registration Form State
   const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [showRegPassword, setShowRegPassword] = useState(false);
   const [regDesignation, setRegDesignation] = useState('');
   const [regShift, setRegShift] = useState('08:00');
   const [regSalary, setRegSalary] = useState('');
   const [regWorkingDays, setRegWorkingDays] = useState<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
-  const [regEmail, setRegEmail] = useState('');
   const [regRole, setRegRole] = useState<'staff' | 'admin'>('staff');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [regError, setRegError] = useState<string | null>(null);
@@ -73,6 +80,17 @@ export default function StaffManagementScreen({
     staff: StaffMember;
     generatedPassword?: string;
   } | null>(null);
+
+  // Generate random secure temporary password
+  const handleGeneratePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    let pass = '';
+    for (let i = 0; i < 8; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    pass += '!24';
+    setRegPassword(pass);
+  };
 
   // Edit Modal State
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
@@ -174,8 +192,21 @@ export default function StaffManagementScreen({
     setRegError(null);
     setRegSuccess(null);
 
-    if (!regName.trim() || regName.trim().length < 2) {
-      setRegError('Please provide a valid staff name (minimum 2 characters).');
+    const trimmedName = regName.trim();
+    if (!trimmedName || trimmedName.length < 2) {
+      setRegError('Please provide a valid staff full name (minimum 2 characters).');
+      return;
+    }
+
+    const trimmedEmail = regEmail.trim().toLowerCase();
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      setRegError('A valid staff email address is required.');
+      return;
+    }
+
+    const trimmedPassword = regPassword.trim();
+    if (!trimmedPassword || trimmedPassword.length < 6) {
+      setRegError('A temporary password of at least 6 characters is required.');
       return;
     }
 
@@ -186,35 +217,36 @@ export default function StaffManagementScreen({
 
     setIsSubmitting(true);
     try {
-      const res = await createStaffAction({
-        name: regName.trim(),
+      const res = await registerStaffAction({
+        name: trimmedName,
+        email: trimmedEmail,
+        password: trimmedPassword,
         designation: regDesignation.trim() || null,
         shift_start_time: regShift,
         salary: regSalary ? Number(regSalary) : null,
         working_days: regWorkingDays,
-        role: regRole,
-        email: regEmail.trim() || null,
       });
 
       if (!res.success || !res.staff) {
-        setRegError(res.error || 'Failed to insert staff profile into database.');
+        setRegError(res.error || 'Failed to register staff account.');
         setIsSubmitting(false);
         return;
       }
 
-      // Prepend or sort into list
+      // Prepend or sort into roster list
       setStaffList((prev) => [...prev, res.staff!].sort((a, b) => a.name.localeCompare(b.name)));
       setRegSuccess({
         staff: res.staff,
-        generatedPassword: res.generatedPassword,
+        generatedPassword: trimmedPassword,
       });
 
-      // Reset form
+      // Reset form fields
       setRegName('');
+      setRegEmail('');
+      setRegPassword('');
       setRegDesignation('');
       setRegShift('08:00');
       setRegSalary('');
-      setRegEmail('');
       setRegWorkingDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
     } catch (err: unknown) {
       setRegError(err instanceof Error ? err.message : 'An unexpected error occurred.');
@@ -518,7 +550,7 @@ export default function StaffManagementScreen({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {/* Field 1: Name */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                <label htmlFor="reg-staff-name" className="block text-xs font-semibold text-gray-700 mb-1.5">
                   Full Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -526,19 +558,82 @@ export default function StaffManagementScreen({
                     <User size={15} />
                   </div>
                   <input
+                    id="reg-staff-name"
+                    name="name"
                     type="text"
                     required
                     value={regName}
                     onChange={(e) => setRegName(e.target.value)}
-                    placeholder="e.g. Dr. Eleanor Vance"
+                    placeholder="e.g. Dr. Alan Turing"
                     className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
                   />
                 </div>
               </div>
 
-              {/* Field 2: Designation */}
+              {/* Field 2: Email */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                <label htmlFor="reg-staff-email" className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Staff Email Address <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <Mail size={15} />
+                  </div>
+                  <input
+                    id="reg-staff-email"
+                    name="email"
+                    type="email"
+                    required
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    placeholder="e.g. alan.turing@attendance.app"
+                    className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
+                  />
+                </div>
+              </div>
+
+              {/* Field 3: Temporary Password */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="reg-staff-password" className="text-xs font-semibold text-gray-700">
+                    Temporary Password <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGeneratePassword}
+                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-teal-700 hover:text-teal-900 transition cursor-pointer"
+                  >
+                    <Sparkles size={11} />
+                    <span>Generate</span>
+                  </button>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <Lock size={15} />
+                  </div>
+                  <input
+                    id="reg-staff-password"
+                    name="password"
+                    type={showRegPassword ? 'text' : 'password'}
+                    required
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    placeholder="Min. 6 characters"
+                    className="w-full pl-9 pr-10 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegPassword(!showRegPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition cursor-pointer"
+                  >
+                    {showRegPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Field 4: Designation */}
+              <div>
+                <label htmlFor="reg-staff-designation" className="block text-xs font-semibold text-gray-700 mb-1.5">
                   Designation / Title
                 </label>
                 <div className="relative">
@@ -546,19 +641,21 @@ export default function StaffManagementScreen({
                     <Briefcase size={15} />
                   </div>
                   <input
+                    id="reg-staff-designation"
+                    name="designation"
                     type="text"
                     value={regDesignation}
                     onChange={(e) => setRegDesignation(e.target.value)}
-                    placeholder="e.g. Senior Physics Faculty"
+                    placeholder="e.g. Senior Science Faculty"
                     className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
                   />
                 </div>
               </div>
 
-              {/* Field 3: Shift Start Time */}
+              {/* Field 5: Shift Start Time */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Shift Start Time <span className="text-red-500">*</span>
+                <label htmlFor="reg-staff-shift" className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Shift Timings <span className="text-red-500">*</span>
                 </label>
                 <div className="space-y-1.5">
                   <div className="relative">
@@ -566,6 +663,8 @@ export default function StaffManagementScreen({
                       <Clock size={15} />
                     </div>
                     <input
+                      id="reg-staff-shift"
+                      name="shift_start_time"
                       type="time"
                       required
                       value={regShift}
@@ -594,9 +693,9 @@ export default function StaffManagementScreen({
                 </div>
               </div>
 
-              {/* Field 4: Salary */}
+              {/* Field 6: Salary (numeric) */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                <label htmlFor="reg-staff-salary" className="block text-xs font-semibold text-gray-700 mb-1.5">
                   Monthly Compensation ($)
                 </label>
                 <div className="relative">
@@ -604,64 +703,16 @@ export default function StaffManagementScreen({
                     <DollarSign size={15} />
                   </div>
                   <input
+                    id="reg-staff-salary"
+                    name="salary"
                     type="number"
                     min="0"
-                    step="50"
+                    step="100"
                     value={regSalary}
                     onChange={(e) => setRegSalary(e.target.value)}
-                    placeholder="e.g. 5400"
+                    placeholder="e.g. 6500"
                     className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
                   />
-                </div>
-              </div>
-
-              {/* Field 5: Email (Optional) */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Email Address <span className="text-gray-400 font-normal">(Optional)</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                    <Mail size={15} />
-                  </div>
-                  <input
-                    type="email"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder="e.g. eleanor@school.edu"
-                    className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
-                  />
-                </div>
-              </div>
-
-              {/* Field 6: Access Role */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Access Role
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRegRole('staff')}
-                    className={`py-2 text-xs font-semibold rounded-lg border transition text-center ${
-                      regRole === 'staff'
-                        ? 'bg-black text-white border-black shadow-sm'
-                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    Staff (Default)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRegRole('admin')}
-                    className={`py-2 text-xs font-semibold rounded-lg border transition text-center ${
-                      regRole === 'admin'
-                        ? 'bg-black text-white border-black shadow-sm'
-                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    Administrator
-                  </button>
                 </div>
               </div>
 
@@ -748,7 +799,270 @@ export default function StaffManagementScreen({
         </div>
 
         {/* ========================================================================= */}
-        {/* 4. CLEAN DATA TABLE CARD (Directly below the form)                       */}
+        {/* 4. ATTENDANCE AUDIT LOG (DATA TABLE) - Directly Below Registration Form    */}
+        {/* ========================================================================= */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+          {/* Header */}
+          <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600">
+                <FileSpreadsheet size={18} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-gray-900">
+                    Attendance Audit Logs
+                  </h3>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+                    {filteredLogs.length} Records
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  All historical attendance logs joined with staff names from profiles. Defaulted to the past 3 months.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Filter Presets */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  const end = new Date();
+                  const start = new Date();
+                  start.setDate(end.getDate() - 7);
+                  const s = start.toISOString().split('T')[0];
+                  const e = end.toISOString().split('T')[0];
+                  setStartDate(s);
+                  setEndDate(e);
+                  setIsFilteringLogs(true);
+                  const res = await getAttendanceLogsAction({ startDate: s, endDate: e });
+                  setIsFilteringLogs(false);
+                  if (res.success) setLogsList(res.logs || []);
+                }}
+                className="px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-black bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition"
+              >
+                Last 7 Days
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const end = new Date();
+                  const start = new Date();
+                  start.setDate(end.getDate() - 30);
+                  const s = start.toISOString().split('T')[0];
+                  const e = end.toISOString().split('T')[0];
+                  setStartDate(s);
+                  setEndDate(e);
+                  setIsFilteringLogs(true);
+                  const res = await getAttendanceLogsAction({ startDate: s, endDate: e });
+                  setIsFilteringLogs(false);
+                  if (res.success) setLogsList(res.logs || []);
+                }}
+                className="px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-black bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition"
+              >
+                Last 30 Days
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const end = new Date();
+                  const start = new Date();
+                  start.setMonth(start.getMonth() - 3);
+                  const s = start.toISOString().split('T')[0];
+                  const e = end.toISOString().split('T')[0];
+                  setStartDate(s);
+                  setEndDate(e);
+                  setIsFilteringLogs(true);
+                  const res = await getAttendanceLogsAction({ startDate: s, endDate: e });
+                  setIsFilteringLogs(false);
+                  if (res.success) setLogsList(res.logs || []);
+                }}
+                className="px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-black bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition"
+              >
+                Last 3 Months (Default)
+              </button>
+            </div>
+          </div>
+
+          {/* Filter Toolbar: Date Range Picker + Search + Status */}
+          <div className="p-5 bg-gray-50/50 border-b border-gray-200 space-y-3">
+            <form onSubmit={handleFilterLogs} className="flex flex-wrap items-end gap-3">
+              {/* Date Range Picker: Start Date */}
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                  Start Date
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400">
+                    <Calendar size={13} />
+                  </div>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-1 focus:ring-black"
+                  />
+                </div>
+              </div>
+
+              {/* Date Range Picker: End Date */}
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                  End Date
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400">
+                    <Calendar size={13} />
+                  </div>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-1 focus:ring-black"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isFilteringLogs}
+                className="bg-black hover:bg-gray-800 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <Filter size={13} />
+                <span>{isFilteringLogs ? 'Filtering...' : 'Apply Date Filter'}</span>
+              </button>
+            </form>
+
+            {logFilterMessage && (
+              <div className="text-xs text-teal-800 bg-teal-50 border border-teal-200 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-teal-600 shrink-0" />
+                <span>{logFilterMessage}</span>
+              </div>
+            )}
+
+            {/* Sub-toolbar: Search by Staff Name & Status Filter */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+              <div className="relative flex-1 max-w-sm">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={logSearchQuery}
+                  onChange={(e) => setLogSearchQuery(e.target.value)}
+                  placeholder="Filter logs by staff name..."
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-black"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-lg border border-gray-200">
+                {(['all', 'present', 'late', 'absent'] as const).map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => setLogStatusFilter(status)}
+                    className={`px-3 py-1 text-xs font-semibold rounded-md capitalize transition ${
+                      logStatusFilter === status
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Audit Log Data Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-gray-50/80 text-[11px] font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                <tr>
+                  <th className="py-3 px-5">Staff Member</th>
+                  <th className="py-3 px-5">Designation</th>
+                  <th className="py-3 px-5">Check-In Timestamp</th>
+                  <th className="py-3 px-5">Status</th>
+                  <th className="py-3 px-5 text-right">Audit Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-gray-400">
+                      <FileSpreadsheet size={32} className="mx-auto mb-2 text-gray-300 stroke-[1.5]" />
+                      <p className="font-semibold text-gray-600">No attendance logs found</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        Try expanding the date range filter or changing your search criteria.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredLogs.map((log) => {
+                    const initials = (log.profiles?.name || 'Staff')
+                      .split(' ')
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((n) => n[0])
+                      .join('')
+                      .toUpperCase();
+
+                    return (
+                      <tr key={log.id} className="hover:bg-gray-50/60 transition">
+                        <td className="py-3.5 px-5 font-medium text-gray-900">
+                          <div className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-full bg-teal-100 text-teal-800 font-bold text-xs flex items-center justify-center shrink-0">
+                              {initials}
+                            </div>
+                            <span className="font-semibold text-gray-900">
+                              {log.profiles?.name || 'Unknown Staff Member'}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="py-3.5 px-5 text-gray-600">
+                          {log.profiles?.designation || <span className="text-gray-300 italic">—</span>}
+                        </td>
+
+                        <td className="py-3.5 px-5 font-mono text-gray-700">
+                          {new Date(log.check_in_time).toLocaleString([], {
+                            month: 'short',
+                            day: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: true,
+                          })}
+                        </td>
+
+                        <td className="py-3.5 px-5">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                              log.status === 'present'
+                                ? 'bg-green-100 text-green-700 border-green-200'
+                                : log.status === 'late'
+                                ? 'bg-amber-100 text-amber-700 border-amber-200'
+                                : 'bg-red-100 text-red-700 border-red-200'
+                            }`}
+                          >
+                            {log.status}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-5 text-right font-mono text-[11px] text-gray-400">
+                          {log.created_at ? new Date(log.created_at).toLocaleDateString() : '—'}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 5. REGISTERED STAFF DIRECTORY TABLE                                       */}
         {/* ========================================================================= */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-12">
           {/* Table Toolbar */}
@@ -960,131 +1274,6 @@ export default function StaffManagementScreen({
               </tbody>
             </table>
           </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* 5. HISTORICAL ATTENDANCE LOG VIEWER (Collapsible Section)                 */}
-        {/* ========================================================================= */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setShowLogs(!showLogs)}
-            className="w-full p-5 flex items-center justify-between text-left hover:bg-gray-50/50 transition border-b border-gray-100"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600">
-                <FileSpreadsheet size={18} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-gray-900">
-                  Historical Attendance Logs Audit (Past 3 Months)
-                </h3>
-                <p className="text-[11px] text-gray-500">
-                  Inspect check-in timestamps and filter by custom date ranges.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 font-medium hidden sm:inline">
-                {showLogs ? 'Collapse Audit Logs' : 'View Audit Logs'}
-              </span>
-              {showLogs ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-            </div>
-          </button>
-
-          {showLogs && (
-            <div className="p-5">
-              {/* Date Filters */}
-              <form onSubmit={handleFilterLogs} className="flex flex-wrap items-end gap-3 mb-5">
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="px-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="px-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg text-gray-900"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={isFilteringLogs}
-                  className="bg-black hover:bg-gray-800 disabled:opacity-50 text-white rounded-lg px-4 py-2 text-xs font-semibold transition"
-                >
-                  {isFilteringLogs ? 'Filtering...' : 'Apply Date Filter'}
-                </button>
-              </form>
-
-              {logFilterMessage && (
-                <div className="mb-4 text-xs text-teal-700 bg-teal-50 border border-teal-200 px-3 py-2 rounded-lg">
-                  {logFilterMessage}
-                </div>
-              )}
-
-              {/* Logs Table */}
-              <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-50 text-[11px] font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">
-                    <tr>
-                      <th className="py-2.5 px-4">Staff Member</th>
-                      <th className="py-2.5 px-4">Designation</th>
-                      <th className="py-2.5 px-4">Check-in Timestamp</th>
-                      <th className="py-2.5 px-4">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredLogs.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="py-8 text-center text-gray-400 text-xs">
-                          No attendance records found for selected period.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredLogs.map((log) => (
-                        <tr key={log.id} className="hover:bg-gray-50/50">
-                          <td className="py-2.5 px-4 font-medium text-gray-900">
-                            {log.profiles?.name || 'Unknown Staff'}
-                          </td>
-                          <td className="py-2.5 px-4 text-gray-600">
-                            {log.profiles?.designation || '—'}
-                          </td>
-                          <td className="py-2.5 px-4 font-mono text-gray-500">
-                            {new Date(log.check_in_time).toLocaleString()}
-                          </td>
-                          <td className="py-2.5 px-4">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                log.status === 'present'
-                                  ? 'bg-green-100 text-green-700'
-                                  : log.status === 'late'
-                                  ? 'bg-amber-100 text-amber-700'
-                                  : 'bg-red-100 text-red-700'
-                              }`}
-                            >
-                              {log.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
