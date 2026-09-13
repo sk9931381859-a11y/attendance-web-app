@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useTransition, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -245,6 +245,19 @@ function LoginForm() {
                   Admin Role
                 </span>
               </button>
+            </div>
+
+            {/* Self-Serve Register Workspace Link */}
+            <div className="mt-5 pt-4 border-t border-gray-100 text-center">
+              <p className="text-xs text-gray-500">
+                Need to register a new school or organization?{' '}
+                <Link
+                  href="/register"
+                  className="font-semibold text-teal-700 hover:text-teal-900 hover:underline transition"
+                >
+                  Create workspace &rarr;
+                </Link>
+              </p>
             </div>
           </div>
         </div>
