@@ -1,7 +1,8 @@
 const CACHE_NAME = "attendance-shell-v1";
 const PRECACHE_ASSETS = [
   "/",
-  "/manifest.webmanifest",
+  "/scan",
+  "/manifest.json",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png",
 ];

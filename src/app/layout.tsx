@@ -5,6 +5,7 @@ import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 export const metadata: Metadata = {
   title: "Attendance Web App",
   description: "Mobile Attendance Tracking System with Anti-Cheat and Geofencing",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#10b981",
+  themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -30,6 +31,8 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#000000" />
       </head>
       <body className="antialiased min-h-screen bg-slate-950 text-slate-100 flex flex-col">
         <ServiceWorkerRegister />

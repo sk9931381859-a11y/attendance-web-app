@@ -19,6 +19,10 @@ import {
   Delete,
   Check,
   KeyRound,
+  Wifi,
+  WifiOff,
+  CloudUpload,
+  HardDriveDownload,
 } from 'lucide-react';
 import jsQR from 'jsqr';
 import { createClient } from '@/lib/supabase/client';
@@ -28,6 +32,13 @@ import {
   ScannerSession,
 } from '@/app/actions/checkin';
 import { getOrCreateDeviceId } from '@/lib/device';
+
+export interface OfflineScanItem {
+  teacher_id: string;
+  company_id: string;
+  kiosk_token: string;
+  timestamp: string;
+}
 
 interface CheckInError {
   message: string;
@@ -42,6 +53,17 @@ export default function ScanPage() {
   const [session, setSession] = useState<ScannerSession | null>(null);
   const [loadingSession, setLoadingSession] = useState<boolean>(true);
   const [deviceId, setDeviceId] = useState<string>('');
+
+  // Network & Offline Queue State
+  const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [offlineQueueCount, setOfflineQueueCount] = useState<number>(0);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'amber' | 'info';
+  } | null>(null);
+
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isSyncingRef = useRef<boolean>(false);
 
   // Scanner & Submission State
   const [isScanning, setIsScanning] = useState<boolean>(false);
@@ -58,6 +80,166 @@ export default function ScanPage() {
   const animFrameRef = useRef<number | null>(null);
   const isVerifyingRef = useRef<boolean>(false);
   const hiddenInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Toast Notification Dispatcher
+  const showToast = useCallback((message: string, type: 'success' | 'amber' | 'info' = 'info') => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setToast({ message, type });
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+    }, 4000);
+  }, []);
+
+  // Helper: Read offline queue from localStorage
+  const getOfflineQueue = useCallback((): OfflineScanItem[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = localStorage.getItem('attendance_offline_queue');
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  // Background Sync: Parse localStorage queue, loop through cached payloads, and fire Supabase inserts with preserved timestamps
+  const syncOfflineQueue = useCallback(async () => {
+    if (typeof window === 'undefined' || isSyncingRef.current) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+
+    const queue = getOfflineQueue();
+    if (queue.length === 0) {
+      setOfflineQueueCount(0);
+      return;
+    }
+
+    isSyncingRef.current = true;
+    const remaining: OfflineScanItem[] = [];
+    let syncedCount = 0;
+    const supabase = createClient();
+
+    for (const item of queue) {
+      try {
+        const scanDate = new Date(item.timestamp);
+        const todayDateStr = scanDate.toISOString().split('T')[0];
+        const dayStart = `${todayDateStr}T00:00:00.000Z`;
+        const dayEnd = `${todayDateStr}T23:59:59.999Z`;
+
+        // Calculate status (present vs late based on shift_start_time + 10 min grace period)
+        let status: 'present' | 'late' = 'present';
+        const shiftTime = session?.profile?.shift_start_time || '08:00:00';
+        const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(shiftTime);
+        if (match) {
+          const shiftDate = new Date(scanDate);
+          shiftDate.setHours(
+            parseInt(match[1], 10),
+            parseInt(match[2], 10),
+            parseInt(match[3] || '0', 10),
+            0
+          );
+          const graceMs = 10 * 60 * 1000;
+          if (scanDate.getTime() > shiftDate.getTime() + graceMs) {
+            status = 'late';
+          }
+        }
+
+        // Check if an attendance log already exists for this teacher today
+        const { data: existingLog } = await supabase
+          .from('attendance_logs')
+          .select('id, status')
+          .eq('teacher_id', item.teacher_id)
+          .gte('check_in_time', dayStart)
+          .lte('check_in_time', dayEnd)
+          .maybeSingle();
+
+        if (existingLog) {
+          if (existingLog.status === 'absent') {
+            await supabase
+              .from('attendance_logs')
+              .update({
+                status: 'late',
+                check_in_time: item.timestamp,
+              })
+              .eq('id', existingLog.id);
+          }
+          // Record exists or was updated from absent: mark as resolved
+          syncedCount++;
+        } else {
+          const { error: insertErr } = await supabase
+            .from('attendance_logs')
+            .insert({
+              teacher_id: item.teacher_id,
+              company_id: item.company_id,
+              check_in_time: item.timestamp,
+              status,
+            });
+
+          if (insertErr) {
+            if (
+              insertErr.code === '23505' ||
+              String(insertErr.code) === '23505' ||
+              insertErr.message?.includes('23505') ||
+              insertErr.message?.includes('idx_unique_teacher_daily_attendance')
+            ) {
+              syncedCount++;
+            } else {
+              console.error('Failed to sync offline item:', insertErr);
+              remaining.push(item);
+            }
+          } else {
+            syncedCount++;
+          }
+        }
+      } catch (err) {
+        console.error('Error syncing offline item:', err);
+        remaining.push(item);
+      }
+    }
+
+    localStorage.setItem('attendance_offline_queue', JSON.stringify(remaining));
+    setOfflineQueueCount(remaining.length);
+    isSyncingRef.current = false;
+
+    if (syncedCount > 0) {
+      showToast('Offline scans synced.', 'success');
+    }
+  }, [getOfflineQueue, session?.profile?.shift_start_time, showToast]);
+
+  // Network-Aware State: listen to online / offline events and trigger initial sync
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const initialOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    setIsOnline(initialOnline);
+
+    const initialQueue = getOfflineQueue();
+    setOfflineQueueCount(initialQueue.length);
+
+    // Sync on load if online and queue is not empty
+    if (initialOnline && initialQueue.length > 0) {
+      syncOfflineQueue();
+    }
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      syncOfflineQueue();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [getOfflineQueue, syncOfflineQueue]);
 
   // Initialize persistent device UUID
   useEffect(() => {
@@ -76,16 +258,41 @@ export default function ScanPage() {
     return `${String(formattedHours).padStart(2, '0')}:${minutes} ${ampm}`;
   };
 
-  // 1. Verify Authenticated Session on Mount
+  // 1. Verify Authenticated Session on Mount (with offline fallback cache)
   const loadSession = useCallback(async () => {
     setLoadingSession(true);
     try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const cached = localStorage.getItem('scanner_cached_session');
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed && parsed.profile) {
+              setSession(parsed);
+              setLoadingSession(false);
+              return;
+            }
+          } catch {}
+        }
+      }
+
       const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) {
+        const cached = typeof window !== 'undefined' ? localStorage.getItem('scanner_cached_session') : null;
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed && parsed.profile) {
+              setSession(parsed);
+              setLoadingSession(false);
+              return;
+            }
+          } catch {}
+        }
         router.push('/login');
         return;
       }
@@ -96,7 +303,7 @@ export default function ScanPage() {
         .eq('id', user.id)
         .maybeSingle();
 
-      setSession({
+      const sessionData: ScannerSession = {
         user: { id: user.id, email: user.email },
         profile: profile || {
           id: user.id,
@@ -109,8 +316,26 @@ export default function ScanPage() {
           device_locked_at: null,
           company_id: user.user_metadata?.company_id || '11111111-1111-1111-1111-111111111111',
         },
-      });
+      };
+
+      setSession(sessionData);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('scanner_cached_session', JSON.stringify(sessionData));
+      }
     } catch (err) {
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('scanner_cached_session');
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed && parsed.profile) {
+              setSession(parsed);
+              setLoadingSession(false);
+              return;
+            }
+          } catch {}
+        }
+      }
       console.error('Failed to load scanner session:', err);
       router.push('/login');
     } finally {
@@ -146,7 +371,7 @@ export default function ScanPage() {
     router.refresh();
   };
 
-  // 3. Token Check-In Handler with Device Lock Verification
+  // 3. Token Check-In Handler with Device Lock Verification & Offline Mutation Queue
   const handleTokenDetected = useCallback(
     async (rawText: string) => {
       if (isVerifyingRef.current) return;
@@ -164,6 +389,52 @@ export default function ScanPage() {
         animFrameRef.current = null;
       }
       setIsScanning(false);
+
+      // OFFLINE MUTATION QUEUE: If the user executes a scan while !isOnline, do not fire Supabase insert.
+      if (!isOnline) {
+        const teacherId = session?.profile?.id || session?.user?.id;
+        const companyId = session?.profile?.company_id || '11111111-1111-1111-1111-111111111111';
+
+        if (!teacherId) {
+          setError({
+            message: 'Authentication required. Please connect online to verify session.',
+          });
+          setIsSubmitting(false);
+          isVerifyingRef.current = false;
+          return;
+        }
+
+        const cleanToken = rawText.trim();
+        const offlinePayload: OfflineScanItem = {
+          teacher_id: teacherId,
+          company_id: companyId,
+          kiosk_token: cleanToken,
+          timestamp: new Date().toISOString(),
+        };
+
+        const currentQueue = getOfflineQueue();
+        currentQueue.push(offlinePayload);
+        localStorage.setItem('attendance_offline_queue', JSON.stringify(currentQueue));
+        setOfflineQueueCount(currentQueue.length);
+
+        // Show required toast: "Saved offline."
+        showToast('Saved offline.', 'amber');
+
+        setResult({
+          success: true,
+          message: 'Saved offline. Scans will be synced automatically when back online.',
+          teacherName: session.profile.name,
+          teacherEmail: session.profile.email || undefined,
+          checkInTime: offlinePayload.timestamp,
+          status: 'present',
+          alreadyCheckedIn: false,
+        });
+
+        setManualCode('');
+        setIsSubmitting(false);
+        isVerifyingRef.current = false;
+        return;
+      }
 
       try {
         const currentDeviceId = deviceId || getOrCreateDeviceId();
@@ -242,7 +513,7 @@ export default function ScanPage() {
         isVerifyingRef.current = false;
       }
     },
-    [deviceId, session, loadSession]
+    [deviceId, session, loadSession, isOnline, getOfflineQueue, showToast]
   );
 
   // 4. Camera Controls
@@ -412,6 +683,12 @@ export default function ScanPage() {
               <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">
                 SCANNER
               </span>
+              {!isOnline && (
+                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 flex items-center gap-1">
+                  <WifiOff size={10} />
+                  OFFLINE
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-gray-500 font-normal">
               Mobile Staff Verification
@@ -421,6 +698,16 @@ export default function ScanPage() {
 
         {/* Header Actions */}
         <div className="flex items-center gap-2">
+          {offlineQueueCount > 0 && isOnline && (
+            <button
+              onClick={() => syncOfflineQueue()}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-1.5 rounded-lg transition shadow-xs cursor-pointer"
+              title="Sync pending offline scans"
+            >
+              <CloudUpload size={12} />
+              <span>Sync ({offlineQueueCount})</span>
+            </button>
+          )}
           <Link
             href="/"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 transition shadow-xs"
@@ -436,6 +723,43 @@ export default function ScanPage() {
           </Link>
         </div>
       </header>
+
+      {/* ========================================================================= */}
+      {/* FLOATING TOAST NOTIFICATION                                               */}
+      {/* ========================================================================= */}
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl shadow-lg border text-xs font-semibold flex items-center gap-2 transition-all duration-300 pointer-events-none animate-in fade-in slide-in-from-top-3 ${
+            toast.type === 'success'
+              ? 'bg-emerald-600 text-white border-emerald-700 shadow-emerald-900/20'
+              : toast.type === 'amber'
+              ? 'bg-amber-600 text-white border-amber-700 shadow-amber-900/20'
+              : 'bg-neutral-900 text-white border-neutral-800 shadow-neutral-900/30'
+          }`}
+        >
+          {toast.type === 'success' && <CheckCircle2 size={16} className="text-white shrink-0" />}
+          {toast.type === 'amber' && <HardDriveDownload size={16} className="text-white shrink-0" />}
+          {toast.type === 'info' && <CloudUpload size={16} className="text-white shrink-0" />}
+          <span>{toast.message}</span>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* PERSISTENT OFFLINE BANNER                                                 */}
+      {/* ========================================================================= */}
+      {!isOnline && (
+        <div className="bg-amber-50 border-b border-amber-200/90 text-amber-900 px-4 py-2.5 flex items-center justify-center gap-2 text-xs font-semibold text-center shadow-xs sticky top-[57px] sm:top-[61px] z-20">
+          <WifiOff size={15} className="text-amber-600 shrink-0" />
+          <span>Offline Mode: Scans will be saved locally and synced automatically.</span>
+          {offlineQueueCount > 0 && (
+            <span className="ml-1.5 px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[10px] font-bold">
+              {offlineQueueCount} queued
+            </span>
+          )}
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 2. MAIN APP VIEWPORT (FULL-SCREEN MOBILE LAYOUT)                          */}
