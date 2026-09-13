@@ -89,7 +89,7 @@ export default function ScanPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id, name, email, role, shift_start_time, designation, registered_device_id, device_locked_at')
+        .select('id, name, email, role, shift_start_time, designation, registered_device_id, device_locked_at, company_id')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -104,6 +104,7 @@ export default function ScanPage() {
           designation: null,
           registered_device_id: null,
           device_locked_at: null,
+          company_id: user.user_metadata?.company_id || '11111111-1111-1111-1111-111111111111',
         },
       });
     } catch (err) {

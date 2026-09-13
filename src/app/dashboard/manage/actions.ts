@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
@@ -13,6 +13,7 @@ export interface StaffMember {
   shift_start_time: string;
   salary?: number | null;
   working_days?: string[] | null;
+  company_id?: string | null;
   created_at?: string;
 }
 
@@ -22,6 +23,7 @@ export interface AttendanceLogRecord {
   check_in_time: string;
   status: 'present' | 'late' | 'absent';
   created_at: string;
+  company_id?: string | null;
   profiles?: {
     name: string;
     designation?: string | null;
@@ -82,7 +84,7 @@ async function verifyAdminRole() {
 
   const { data: profile, error: profError } = await supabase
     .from('profiles')
-    .select('role')
+    .select('id, role, company_id')
     .eq('id', user.id)
     .single();
 
@@ -90,7 +92,9 @@ async function verifyAdminRole() {
     throw new Error('Unauthorized: Administrator role required.');
   }
 
-  return { supabase, user };
+  const companyId = profile.company_id || '11111111-1111-1111-1111-111111111111';
+
+  return { supabase, user, profile, companyId };
 }
 
 /**
@@ -124,11 +128,11 @@ function normalizeTime(timeStr?: string): string {
  * Server Action: Staff Registration Form
  * Captures Name, Email, Temporary Password, Designation, Shift Timings, Salary, Working Days.
  * Initializes Supabase with SUPABASE_SERVICE_ROLE_KEY to call supabase.auth.admin.createUser().
- * Upon successful account creation, inserts the returned user.id into public.profiles.
+ * Upon successful account creation, inserts the returned user.id into public.profiles with company_id.
  */
 export async function registerStaffAction(data: RegisterStaffInput): Promise<StaffActionResult> {
   try {
-    await verifyAdminRole();
+    const { companyId } = await verifyAdminRole();
     const adminClient = getAdminClient();
 
     const name = data.name?.trim();
@@ -153,7 +157,7 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
       ? data.working_days
       : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-    // 1. Create Supabase Auth User via service role key
+    // 1. Create Supabase Auth User via service role key with company_id metadata
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -162,6 +166,7 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
         name,
         role: 'staff',
         designation,
+        company_id: companyId,
       },
     });
 
@@ -174,7 +179,7 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
 
     const newUserId = authData.user.id;
 
-    // 2. Insert returned user.id and details into public.profiles table
+    // 2. Insert returned user.id and details into public.profiles table scoped to Principal's company_id
     const profilePayload = {
       id: newUserId,
       name,
@@ -184,6 +189,7 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
       shift_start_time,
       salary,
       working_days,
+      company_id: companyId,
     };
 
     const { data: insertedProfile, error: profileError } = await adminClient
@@ -212,6 +218,7 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
         shift_start_time: insertedProfile.shift_start_time,
         salary: insertedProfile.salary != null ? Number(insertedProfile.salary) : null,
         working_days: insertedProfile.working_days,
+        company_id: insertedProfile.company_id,
         created_at: insertedProfile.created_at,
       },
     };
@@ -229,12 +236,13 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
  */
 export async function getStaffListAction(): Promise<StaffMember[]> {
   try {
-    await verifyAdminRole();
+    const { companyId } = await verifyAdminRole();
     const adminClient = getAdminClient();
 
     const { data, error } = await adminClient
       .from('profiles')
-      .select('id, name, email, role, designation, shift_start_time, salary, working_days, created_at')
+      .select('id, name, email, role, designation, shift_start_time, salary, working_days, company_id, created_at')
+      .eq('company_id', companyId)
       .order('name', { ascending: true });
 
     if (error) {
@@ -251,6 +259,7 @@ export async function getStaffListAction(): Promise<StaffMember[]> {
       shift_start_time: item.shift_start_time || '08:00:00',
       salary: item.salary != null ? Number(item.salary) : null,
       working_days: Array.isArray(item.working_days) ? item.working_days : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+      company_id: item.company_id,
       created_at: item.created_at,
     }));
   } catch (err) {
@@ -262,6 +271,7 @@ export async function getStaffListAction(): Promise<StaffMember[]> {
 /**
  * Server Action: Fetches attendance logs joined with profiles.name.
  * Defaults to created_at >= (NOW() - INTERVAL '3 months').
+ * Scoped strictly to the Principal's company_id.
  * Supports dynamic Date Range Picker (startDate to endDate).
  */
 export async function getAttendanceLogsAction(filters?: {
@@ -269,12 +279,13 @@ export async function getAttendanceLogsAction(filters?: {
   endDate?: string;
 }): Promise<{ success: boolean; logs: AttendanceLogRecord[]; error?: string }> {
   try {
-    await verifyAdminRole();
+    const { companyId } = await verifyAdminRole();
     const adminClient = getAdminClient();
 
     let query = adminClient
       .from('attendance_logs')
-      .select('id, teacher_id, check_in_time, status, created_at, profiles:teacher_id(name, designation, role)')
+      .select('id, teacher_id, check_in_time, status, created_at, company_id, profiles:teacher_id(name, designation, role)')
+      .eq('company_id', companyId)
       .order('check_in_time', { ascending: false });
 
     if (filters?.startDate) {
@@ -307,6 +318,7 @@ export async function getAttendanceLogsAction(filters?: {
       check_in_time: item.check_in_time,
       status: item.status as 'present' | 'late' | 'absent',
       created_at: item.created_at,
+      company_id: item.company_id,
       profiles: item.profiles ? {
         name: item.profiles.name || 'Unknown Staff',
         designation: item.profiles.designation || null,
@@ -327,6 +339,7 @@ export async function getAttendanceLogsAction(filters?: {
 
 /**
  * Server Action: Updates an existing staff member's profile.
+ * Scoped to organization company_id.
  */
 export async function updateStaffAction(data: {
   id: string;
@@ -339,7 +352,7 @@ export async function updateStaffAction(data: {
   email?: string | null;
 }): Promise<StaffActionResult> {
   try {
-    await verifyAdminRole();
+    const { companyId } = await verifyAdminRole();
     const adminClient = getAdminClient();
 
     if (!data.id) {
@@ -373,6 +386,7 @@ export async function updateStaffAction(data: {
       .from('profiles')
       .update(updatePayload)
       .eq('id', data.id)
+      .eq('company_id', companyId)
       .select()
       .single();
 
@@ -396,6 +410,7 @@ export async function updateStaffAction(data: {
         shift_start_time: updated.shift_start_time,
         salary: updated.salary != null ? Number(updated.salary) : null,
         working_days: updated.working_days,
+        company_id: updated.company_id,
         created_at: updated.created_at,
       },
     };
@@ -408,11 +423,11 @@ export async function updateStaffAction(data: {
 }
 
 /**
- * Server Action: Deletes a staff member profile.
+ * Server Action: Deletes a staff member profile scoped to company_id.
  */
 export async function deleteStaffAction(id: string): Promise<StaffActionResult> {
   try {
-    const { user } = await verifyAdminRole();
+    const { user, companyId } = await verifyAdminRole();
     const adminClient = getAdminClient();
 
     if (!id) {
@@ -423,7 +438,11 @@ export async function deleteStaffAction(id: string): Promise<StaffActionResult> 
       return { success: false, error: 'You cannot delete your own administrator profile.' };
     }
 
-    const { error } = await adminClient.from('profiles').delete().eq('id', id);
+    const { error } = await adminClient
+      .from('profiles')
+      .delete()
+      .eq('id', id)
+      .eq('company_id', companyId);
 
     if (error) {
       console.error('Failed to delete staff profile:', error);

@@ -17,7 +17,19 @@ import {
 import { getKioskTokenAction } from '@/app/actions/kiosk';
 import { TOTPResult } from '@/lib/totp';
 
-export default function KioskScreen({ initialToken }: { initialToken?: TOTPResult }) {
+export interface KioskCompany {
+  id: string;
+  name: string;
+  slug: string;
+  subscription_status?: string | null;
+}
+
+interface KioskScreenProps {
+  initialToken?: TOTPResult;
+  company?: KioskCompany | null;
+}
+
+export default function KioskScreen({ initialToken, company }: KioskScreenProps) {
   const [tokenData, setTokenData] = useState<TOTPResult | null>(initialToken || null);
   const [secondsLeft, setSecondsLeft] = useState<number>(30);
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -26,13 +38,13 @@ export default function KioskScreen({ initialToken }: { initialToken?: TOTPResul
   const [isFullscreen, setIsFullscreen] = useState(false);
   const fetchLock = useRef(false);
 
-  // Sync token from Server Action
+  // Sync token from Server Action scoped to organization company_id
   const refreshToken = useCallback(async () => {
     if (fetchLock.current) return;
     fetchLock.current = true;
     setIsRefreshing(true);
     try {
-      const data = await getKioskTokenAction();
+      const data = await getKioskTokenAction(company?.id);
       setTokenData(data);
       setSecondsLeft(data.remainingSeconds);
     } catch (err) {
@@ -41,7 +53,7 @@ export default function KioskScreen({ initialToken }: { initialToken?: TOTPResul
       setIsRefreshing(false);
       fetchLock.current = false;
     }
-  }, []);
+  }, [company?.id]);
 
   // Initialize clock and token
   useEffect(() => {
@@ -127,14 +139,14 @@ export default function KioskScreen({ initialToken }: { initialToken?: TOTPResul
           <div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-gray-900 tracking-tight">
-                Attendance Hub
+                {company?.name ? company.name : 'Attendance Hub'}
               </span>
               <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">
                 KIOSK
               </span>
             </div>
             <p className="text-[11px] text-gray-500 font-normal">
-              Facility Lobby Anti-Cheat Display
+              {company?.name ? `${company.name} • Lobby Anti-Cheat Display` : 'Facility Lobby Anti-Cheat Display'}
             </p>
           </div>
         </div>
@@ -194,6 +206,11 @@ export default function KioskScreen({ initialToken }: { initialToken?: TOTPResul
           <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center justify-center gap-2">
             Scan to Check In
           </h2>
+          {company?.name && (
+            <span className="text-xs font-semibold text-teal-700 mt-0.5">
+              {company.name}
+            </span>
+          )}
           <p className="text-xs text-gray-500 mt-1 max-w-xs">
             Point your mobile camera at this QR code. The token dynamically rotates every 30 seconds.
           </p>

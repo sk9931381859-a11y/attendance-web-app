@@ -46,6 +46,7 @@ export interface ScannerSession {
     designation?: string | null;
     registered_device_id?: string | null;
     device_locked_at?: string | null;
+    company_id?: string | null;
   };
 }
 
@@ -67,10 +68,12 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
 
   // 1. Verify TOTP token from Kiosk QR code
   let cleanToken = token.trim();
+  let scannedCompanyId: string | undefined = undefined;
   try {
     if (cleanToken.startsWith('{')) {
       const parsed = JSON.parse(cleanToken);
       if (parsed.token) cleanToken = parsed.token;
+      scannedCompanyId = parsed.company_id || parsed.companyId || undefined;
     }
   } catch {}
 
@@ -104,15 +107,16 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
     const dayStart = `${todayStr}T00:00:00.000Z`;
     const dayEnd = `${todayStr}T23:59:59.999Z`;
 
-    // Retrieve staff profile for authenticated user
+    // Retrieve staff profile for authenticated user (including company_id)
     let { data: profile } = await supabase
       .from('profiles')
-      .select('id, name, email, shift_start_time, designation, registered_device_id, device_locked_at')
+      .select('id, name, email, shift_start_time, designation, registered_device_id, device_locked_at, company_id')
       .eq('id', teacherId)
       .maybeSingle();
 
     if (!profile) {
       // If profile not yet linked, provision with auth user metadata or fallback
+      const defaultCompanyId = user.user_metadata?.company_id || '11111111-1111-1111-1111-111111111111';
       const { data: newProfile } = await supabase
         .from('profiles')
         .insert({
@@ -121,8 +125,9 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
           email: user.email,
           shift_start_time: '08:00:00',
           role: 'staff',
+          company_id: defaultCompanyId,
         })
-        .select('id, name, email, shift_start_time, designation, registered_device_id, device_locked_at')
+        .select('id, name, email, shift_start_time, designation, registered_device_id, device_locked_at, company_id')
         .single();
       if (newProfile) {
         profile = newProfile;
@@ -136,7 +141,18 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
       shift_start_time: '08:00:00',
       registered_device_id: null,
       device_locked_at: null,
+      company_id: user.user_metadata?.company_id || '11111111-1111-1111-1111-111111111111',
     };
+
+    const teacherCompanyId = effectiveProfile.company_id || '11111111-1111-1111-1111-111111111111';
+
+    // Cross-Tenant Scope Check: Ensure the scanned QR belongs to the staff's organization
+    if (scannedCompanyId && scannedCompanyId !== teacherCompanyId) {
+      return {
+        success: false,
+        error: 'This QR code belongs to a different organization. Please scan the kiosk at your school.',
+      };
+    }
 
     // 3. Cryptographic Device Lock & Verification
     const incomingDeviceId = (device_id || '').trim();
@@ -224,13 +240,14 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
       };
     }
 
-    // Commit check-in record to attendance_logs
+    // Commit check-in record to attendance_logs scoped to staff company_id
     const { data: inserted, error: insertError } = await supabase
       .from('attendance_logs')
       .insert({
         teacher_id: teacherId,
         check_in_time: now.toISOString(),
         status,
+        company_id: teacherCompanyId,
       })
       .select()
       .single();
@@ -300,7 +317,7 @@ export async function getScannerSessionAction(): Promise<ScannerSession | null> 
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, name, email, role, shift_start_time, designation, registered_device_id, device_locked_at')
+      .select('id, name, email, role, shift_start_time, designation, registered_device_id, device_locked_at, company_id')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -318,6 +335,7 @@ export async function getScannerSessionAction(): Promise<ScannerSession | null> 
         designation: null,
         registered_device_id: null,
         device_locked_at: null,
+        company_id: user.user_metadata?.company_id || '11111111-1111-1111-1111-111111111111',
       },
     };
   } catch (err) {

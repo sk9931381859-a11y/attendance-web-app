@@ -27,6 +27,9 @@ interface TeacherRow {
 }
 
 export default function DashboardPage() {
+  const [companyId, setCompanyId] = useState<string>('11111111-1111-1111-1111-111111111111');
+  const [companyName, setCompanyName] = useState<string>('');
+
   const [staffRows, setStaffRows] = useState<TeacherRow[]>([]);
   const [totalStaff, setTotalStaff] = useState(0);
   const [presentCount, setPresentCount] = useState(0);
@@ -53,18 +56,42 @@ export default function DashboardPage() {
 
   /**
    * Fetches live data from Supabase:
-   * 1. Profiles (all registered staff)
-   * 2. Today's attendance logs (created_at matches today)
+   * 1. Profiles (all registered staff for active company)
+   * 2. Today's attendance logs (created_at matches today for active company)
    * Calculates metrics and maps data table rows.
    */
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (targetCompanyId?: string) => {
     try {
       const supabase = createClient();
 
-      // 1. Fetch all staff from public.profiles
+      let activeCompanyId = targetCompanyId || companyId;
+      if (!targetCompanyId) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('company_id, companies:company_id(name)')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (prof?.company_id) {
+            activeCompanyId = prof.company_id;
+            setCompanyId(prof.company_id);
+            if ((prof as any).companies?.name) {
+              setCompanyName((prof as any).companies.name);
+            }
+          }
+        }
+      }
+
+      // 1. Fetch all staff from public.profiles scoped to active company
       const { data: profiles, error: pError } = await supabase
         .from('profiles')
-        .select('id, name, shift_start_time, role')
+        .select('id, name, shift_start_time, role, company_id')
+        .eq('company_id', activeCompanyId)
         .order('name', { ascending: true });
 
       if (pError) {
@@ -72,7 +99,7 @@ export default function DashboardPage() {
         return;
       }
 
-      // 2. Fetch today's check-ins from public.attendance_logs
+      // 2. Fetch today's check-ins from public.attendance_logs scoped to active company
       const now = new Date();
       const todayIso = now.toISOString().split('T')[0];
       const startOfToday = `${todayIso}T00:00:00.000Z`;
@@ -80,7 +107,8 @@ export default function DashboardPage() {
 
       const { data: logs, error: lError } = await supabase
         .from('attendance_logs')
-        .select('id, teacher_id, check_in_time, status, created_at')
+        .select('id, teacher_id, check_in_time, status, created_at, company_id')
+        .eq('company_id', activeCompanyId)
         .gte('created_at', startOfToday)
         .lte('created_at', endOfToday)
         .order('created_at', { ascending: false });
@@ -175,52 +203,86 @@ export default function DashboardPage() {
     } catch (err) {
       console.error('Failed to fetch live dashboard data:', err);
     }
-  }, []);
+  }, [companyId]);
 
   // Initial load & Supabase Realtime channel subscription
   useEffect(() => {
-    fetchDashboardData();
+    let activeChannel: any = null;
 
-    const supabase = createClient();
-    const channel = supabase
-      .channel('dashboard-live-attendance')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'attendance_logs',
-        },
-        (payload) => {
-          console.log('Realtime attendance_logs change received:', payload);
-          fetchDashboardData();
+    const setupDashboard = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      let activeCompanyId = companyId;
+      if (user) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('company_id, companies:company_id(name)')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (prof?.company_id) {
+          activeCompanyId = prof.company_id;
+          setCompanyId(prof.company_id);
+          if ((prof as any).companies?.name) {
+            setCompanyName((prof as any).companies.name);
+          }
         }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-        },
-        (payload) => {
-          console.log('Realtime profiles change received:', payload);
-          fetchDashboardData();
-        }
-      )
-      .subscribe((status) => {
-        setIsConnected(status === 'SUBSCRIBED');
-      });
+      }
+
+      await fetchDashboardData(activeCompanyId);
+
+      // Ensure the Supabase Realtime channel subscription filters events specifically for the active company:
+      // channel('realtime:attendance').on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_logs', filter: `company_id=eq.${companyId}` }, ...)
+      activeChannel = supabase
+        .channel('realtime:attendance')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'attendance_logs',
+            filter: `company_id=eq.${activeCompanyId}`,
+          },
+          (payload) => {
+            console.log('Realtime attendance_logs change received for company:', payload);
+            fetchDashboardData(activeCompanyId);
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'profiles',
+            filter: `company_id=eq.${activeCompanyId}`,
+          },
+          (payload) => {
+            console.log('Realtime profiles change received for company:', payload);
+            fetchDashboardData(activeCompanyId);
+          }
+        )
+        .subscribe((status) => {
+          setIsConnected(status === 'SUBSCRIBED');
+        });
+    };
+
+    setupDashboard();
 
     return () => {
-      supabase.removeChannel(channel);
+      if (activeChannel) {
+        const supabase = createClient();
+        supabase.removeChannel(activeChannel);
+      }
     };
-  }, [fetchDashboardData]);
+  }, [fetchDashboardData, companyId]);
 
   // Manual Refresh Handler
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await fetchDashboardData();
+    await fetchDashboardData(companyId);
     setIsRefreshing(false);
   };
 
@@ -231,12 +293,9 @@ export default function DashboardPage() {
     });
   };
 
-  // Filter rows based on search input and selected filter pill
+  // Filter staff rows
   const filteredRows = staffRows.filter((row) => {
-    const matchesSearch =
-      row.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      row.hash.toLowerCase().includes(searchQuery.toLowerCase());
-
+    const matchesSearch = row.name.toLowerCase().includes(searchQuery.toLowerCase());
     if (selectedFilter === 'all') return matchesSearch;
     return matchesSearch && row.status.toLowerCase() === selectedFilter.toLowerCase();
   });
@@ -264,14 +323,14 @@ export default function DashboardPage() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-gray-900 tracking-tight">
-                Attendance Hub
+                {companyName || 'Attendance Hub'}
               </span>
               <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-green-100 text-green-700 border border-green-200">
                 ADMIN
               </span>
             </div>
             <p className="text-[11px] text-gray-500 font-normal">
-              Principal Administration & Oversight
+              {companyName ? `${companyName} • Principal Administration & Oversight` : 'Principal Administration & Oversight'}
             </p>
           </div>
         </div>

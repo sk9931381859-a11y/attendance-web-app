@@ -9,13 +9,17 @@ export interface TOTPResult {
   remainingSeconds: number;
   expiresAt: number;
   qrPayload: string;
+  companyId?: string;
 }
 
 /**
  * Generates an RFC 6238-compliant Time-based One-Time Password (TOTP)
  * Strictly rotating every 30 seconds for the Anti-Cheat Kiosk.
+ * Embeds company_id inside the generated TOTP payload or metadata so that
+ * check-ins are explicitly scoped to the specific organization.
  */
 export function generateKioskToken(
+  companyId?: string,
   secret = DEFAULT_SECRET,
   timeStepSeconds = 30
 ): TOTPResult {
@@ -42,12 +46,20 @@ export function generateKioskToken(
     (digest[offset + 3] & 0xff);
 
   const otp = (binary % 1000000).toString().padStart(6, '0');
-  const qrPayload = JSON.stringify({
+  
+  const payloadData: Record<string, any> = {
     type: 'ATTENDANCE_KIOSK_TOTP',
     token: otp,
     step,
     expiresAt,
-  });
+  };
+
+  if (companyId) {
+    payloadData.company_id = companyId;
+    payloadData.companyId = companyId;
+  }
+
+  const qrPayload = JSON.stringify(payloadData);
 
   return {
     token: otp,
@@ -55,6 +67,7 @@ export function generateKioskToken(
     remainingSeconds,
     expiresAt,
     qrPayload,
+    companyId,
   };
 }
 
