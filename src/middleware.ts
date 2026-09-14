@@ -23,6 +23,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Let Next.js Server Actions be handled by dedicated server action rate limiter (loginWithRateLimit)
+  if (request.headers.has('next-action')) {
+    return NextResponse.next();
+  }
+
   const { pathname } = request.nextUrl;
   if (pathname !== '/login' && pathname !== '/register') {
     return NextResponse.next();

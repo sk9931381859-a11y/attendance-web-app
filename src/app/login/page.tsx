@@ -15,7 +15,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import Link from 'next/link';
-import { signInAction } from '@/app/actions/auth';
+import { loginWithRateLimit } from '@/app/login/actions';
 
 function LoginForm() {
   const router = useRouter();
@@ -50,14 +50,17 @@ function LoginForm() {
     const formData = new FormData(e.currentTarget);
 
     startTransition(async () => {
-      const res = await signInAction(formData);
-      if (!res.success) {
-        setError(res.error || 'Failed to authenticate. Please check your credentials.');
-        return;
+      try {
+        const res = await loginWithRateLimit(formData);
+        if (res?.error) {
+          setError(res.error);
+        }
+      } catch (err: any) {
+        if (err?.digest?.startsWith('NEXT_REDIRECT') || err?.message === 'NEXT_REDIRECT') {
+          throw err;
+        }
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred during sign in.');
       }
-
-      router.push(res.redirectTo || '/scan');
-      router.refresh();
     });
   };
 
@@ -110,10 +113,14 @@ function LoginForm() {
 
           {/* Error Banner */}
           {error && (
-            <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-start gap-2.5">
+            <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-start gap-2.5 animate-in fade-in duration-200">
               <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
               <div className="flex-1">
-                <div className="font-semibold text-red-800">Authentication Failed</div>
+                <div className="font-semibold text-red-800">
+                  {error.toLowerCase().includes('too many') || error.toLowerCase().includes('rate')
+                    ? 'Rate Limit Exceeded'
+                    : 'Authentication Failed'}
+                </div>
                 <div className="text-red-700 text-[11px] mt-0.5">{error}</div>
               </div>
             </div>
