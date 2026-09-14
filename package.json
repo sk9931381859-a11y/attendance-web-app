@@ -12,6 +12,8 @@
     "@sentry/nextjs": "^10.74.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.48.1",
+    "@upstash/ratelimit": "^2.1.0",
+    "@upstash/redis": "^1.38.4",
     "clsx": "^2.1.1",
     "html5-qrcode": "^2.3.8",
     "jsqr": "^1.4.0",
