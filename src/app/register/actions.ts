@@ -120,20 +120,22 @@ export async function registerOrganizationAction(
 
     createdCompanyId = company.id;
 
-    // 3. Transaction Step 2: Create Administrator Account via Auth Admin
-    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+    // 3. Transaction Step 2: Create Administrator Account via supabase.auth.signUp
+    const supabase = createClient();
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      email_confirm: true,
-      user_metadata: {
-        name: adminName,
-        role: 'admin',
-        company_id: createdCompanyId,
+      options: {
+        data: {
+          name: adminName,
+          role: 'admin',
+          company_id: createdCompanyId,
+        },
       },
     });
 
     if (authError || !authData?.user) {
-      console.error('Failed to create admin user during onboarding:', authError);
+      console.error('Failed to register admin user during onboarding:', authError);
 
       // ROLLBACK: Delete newly created company to prevent orphaned rows
       if (createdCompanyId) {
@@ -183,36 +185,10 @@ export async function registerOrganizationAction(
       };
     }
 
-    // 5. Transaction Step 4: Drop session cookie into browser via standard signInWithPassword
-    try {
-      const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        console.warn('Direct sign-in session cookie error:', signInError);
-        return {
-          success: true,
-          redirectTo: '/login?registered=true',
-          companySlug: company.slug,
-          companyName: company.name,
-        };
-      }
-    } catch (cookieErr) {
-      console.warn('Cookie sign-in warning:', cookieErr);
-      return {
-        success: true,
-        redirectTo: '/login?registered=true',
-        companySlug: company.slug,
-        companyName: company.name,
-      };
-    }
-
+    // 5. Intercept redirect: route user to /verify?email={userEmail} to await OTP confirmation
     return {
       success: true,
-      redirectTo: '/dashboard',
+      redirectTo: `/verify?email=${encodeURIComponent(email)}`,
       companySlug: company.slug,
       companyName: company.name,
     };

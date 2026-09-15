@@ -13,6 +13,7 @@ import {
   RefreshCw,
   GraduationCap,
   UserCheck,
+  CheckCircle2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { loginWithRateLimit } from '@/app/login/actions';
@@ -111,6 +112,19 @@ function LoginForm() {
             </p>
           </div>
 
+          {/* Password Updated Success Banner */}
+          {searchParams.get('password_updated') === 'true' && (
+            <div className="mb-5 p-3.5 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-800 flex items-start gap-2.5 animate-in fade-in duration-200">
+              <CheckCircle2 size={16} className="text-teal-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <div className="font-semibold text-teal-900">Password Updated Successfully</div>
+                <div className="text-teal-700 text-[11px] mt-0.5">
+                  Your credentials have been securely updated. Please sign in with your new password.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Error Banner */}
           {error && (
             <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-start gap-2.5 animate-in fade-in duration-200">
@@ -154,12 +168,20 @@ function LoginForm() {
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="block text-xs font-semibold text-gray-700 mb-1.5"
-              >
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label
+                  htmlFor="password"
+                  className="block text-xs font-semibold text-gray-700"
+                >
+                  Password
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-[11px] font-semibold text-teal-600 hover:text-teal-700 transition"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                   <Lock size={15} />
