@@ -18,6 +18,13 @@ const ratelimit = new Ratelimit({
 });
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Explicitly ensure root route (/) bypasses authentication and rate limiting checks
+  if (pathname === '/') {
+    return NextResponse.next();
+  }
+
   // Apply this rate limiter exclusively to POST requests hitting /login and /register
   if (request.method !== 'POST') {
     return NextResponse.next();
@@ -28,7 +35,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const { pathname } = request.nextUrl;
   if (pathname !== '/login' && pathname !== '/register') {
     return NextResponse.next();
   }
