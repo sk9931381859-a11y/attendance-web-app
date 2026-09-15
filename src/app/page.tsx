@@ -11,6 +11,12 @@ export default function HomePage() {
           </span>
           <nav className="flex items-center gap-4">
             <Link
+              href="/services"
+              className="text-sm font-medium text-slate-400 hover:text-white transition"
+            >
+              Services
+            </Link>
+            <Link
               href="/login"
               className="text-sm font-medium text-slate-400 hover:text-white transition"
             >
