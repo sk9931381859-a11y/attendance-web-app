@@ -57,6 +57,182 @@ function ServiceCardWrapper({
   );
 }
 
+// --- Automations Pipeline Visualizer (Stripe -> Database -> ZenithFlowHQ) ---
+function AutomationsPipelineVisualizer() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(containerRef, { once: false, amount: 0.35 });
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative w-full my-6 p-6 sm:p-8 rounded-2xl bg-[#0E1116]/90 border border-[#232830] overflow-hidden"
+    >
+      {/* Background radial glow */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#6366F1]/10 via-[#06B6D4]/10 to-[#8B5CF6]/10 pointer-events-none blur-xl"></div>
+
+      {/* Header Label */}
+      <div className="flex items-center justify-between mb-8 relative z-10">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[#06B6D4] animate-pulse"></span>
+          <span className="text-xs font-mono font-semibold tracking-wider text-[#06B6D4] uppercase">
+            Autonomous Pipeline Topology
+          </span>
+        </div>
+        <span className="text-[11px] font-mono text-[#8B909A] px-2.5 py-0.5 rounded-full bg-[#16191E] border border-[#232830]">
+          Auto-Drawing Stream
+        </span>
+      </div>
+
+      {/* Pipeline Container with SVG and Floating Circles */}
+      <div className="relative w-full pt-2 pb-4">
+        {/* SVG Connecting Line aligned with circular icon centers */}
+        <div className="absolute left-0 right-0 top-10 sm:top-12 -translate-y-1/2 h-12 px-12 sm:px-24 pointer-events-none">
+          <svg
+            className="w-full h-full overflow-visible"
+            viewBox="0 0 100 20"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient id="pipelineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#6366F1" />
+                <stop offset="50%" stopColor="#06B6D4" />
+                <stop offset="100%" stopColor="#8B5CF6" />
+              </linearGradient>
+              <filter id="glow" x="-20%" y="-50%" width="140%" height="200%">
+                <feGaussianBlur stdDeviation="2.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            {/* Faint Background Track Line */}
+            <line
+              x1="0"
+              y1="10"
+              x2="100"
+              y2="10"
+              stroke="url(#pipelineGradient)"
+              strokeWidth="2.5"
+              strokeOpacity="0.25"
+              strokeDasharray="4 4"
+            />
+
+            {/* Animated Drawing SVG Line from Left to Right */}
+            <motion.path
+              d="M 0 10 L 100 10"
+              stroke="url(#pipelineGradient)"
+              strokeWidth="4"
+              strokeLinecap="round"
+              filter="url(#glow)"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: isInView ? 1 : 0 }}
+              transition={{
+                duration: 1.8,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+            />
+
+            {/* Traveling Data Packet pulse along the line when in view */}
+            {isInView && (
+              <motion.circle
+                r="4.5"
+                fill="#FFFFFF"
+                filter="url(#glow)"
+                initial={{ cx: 0, opacity: 0 }}
+                animate={{
+                  cx: [0, 50, 100],
+                  opacity: [0, 1, 1, 0],
+                }}
+                transition={{
+                  duration: 2.2,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                  delay: 1.2,
+                }}
+                cy="10"
+              />
+            )}
+          </svg>
+        </div>
+
+        {/* Floating Circles Row */}
+        <div className="relative w-full flex items-start justify-between px-6 sm:px-16">
+          {/* 1. Stripe Floating Circle */}
+          <motion.div
+            animate={{ y: [-5, 5, -5] }}
+            transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
+            className="relative z-10 flex flex-col items-center group cursor-pointer"
+          >
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#16191E] border-2 border-[#6366F1] flex flex-col items-center justify-center shadow-[0_0_24px_rgba(99,102,241,0.35)] transition-transform duration-300 group-hover:scale-110">
+              <span className="material-symbols-outlined text-[#6366F1] text-[24px] sm:text-[28px]">
+                credit_card
+              </span>
+            </div>
+            <span className="mt-2.5 text-xs font-semibold text-white tracking-wide">
+              Stripe
+            </span>
+            <span className="text-[10px] font-mono text-[#6366F1]">
+              Event Source
+            </span>
+          </motion.div>
+
+          {/* 2. Database Floating Circle */}
+          <motion.div
+            animate={{ y: [5, -5, 5] }}
+            transition={{ duration: 4.0, repeat: Infinity, ease: 'easeInOut' }}
+            className="relative z-10 flex flex-col items-center group cursor-pointer"
+          >
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#16191E] border-2 border-[#06B6D4] flex flex-col items-center justify-center shadow-[0_0_24px_rgba(6,182,212,0.35)] transition-transform duration-300 group-hover:scale-110">
+              <span className="material-symbols-outlined text-[#06B6D4] text-[24px] sm:text-[28px]">
+                database
+              </span>
+            </div>
+            <span className="mt-2.5 text-xs font-semibold text-white tracking-wide">
+              Database
+            </span>
+            <span className="text-[10px] font-mono text-[#06B6D4]">
+              PostgreSQL Sync
+            </span>
+          </motion.div>
+
+          {/* 3. ZenithFlowHQ Floating Circle */}
+          <motion.div
+            animate={{ y: [-4, 6, -4] }}
+            transition={{ duration: 3.7, repeat: Infinity, ease: 'easeInOut' }}
+            className="relative z-10 flex flex-col items-center group cursor-pointer"
+          >
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#16191E] border-2 border-[#8B5CF6] flex flex-col items-center justify-center shadow-[0_0_24px_rgba(139,92,246,0.4)] transition-transform duration-300 group-hover:scale-110">
+              <span className="material-symbols-outlined text-[#8B5CF6] text-[24px] sm:text-[28px]">
+                hub
+              </span>
+            </div>
+            <span className="mt-2.5 text-xs font-semibold text-white tracking-wide">
+              ZenithFlowHQ
+            </span>
+            <span className="text-[10px] font-mono text-[#8B5CF6]">
+              Core Engine
+            </span>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Pipeline Status Indicator */}
+      <div className="mt-4 pt-3 border-t border-[#232830]/60 flex items-center justify-between text-[11px] font-mono text-[#555A64]">
+        <span>Input: Webhook Payload</span>
+        <span className="text-[#06B6D4] flex items-center gap-1">
+          <span>Stripe</span>
+          <span>➔</span>
+          <span className="text-[#06B6D4]">Database</span>
+          <span>➔</span>
+          <span className="text-[#8B5CF6]">ZenithFlowHQ</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function ServicesPage() {
   const [activeService, setActiveService] = useState<string>('service-1');
   const [sidebarSent, setSidebarSent] = useState(false);
@@ -831,6 +1007,9 @@ export default function ServicesPage() {
                     <p className="mt-6 text-base text-[#8B909A] leading-relaxed max-w-2xl">
                       We eliminate repetitive operations by chaining intelligent AI agents, custom webhooks, ERP/CRM syncs, and financial data pipelines into seamless autonomous engines.
                     </p>
+
+                    {/* Automations 3 Floating Circles & Animated SVG Line */}
+                    <AutomationsPipelineVisualizer />
 
                     <div className="mt-8 rounded-2xl bg-[#111419]/80 border border-[#232830] p-6 flex flex-col gap-4">
                       <div className="p-4 rounded-xl bg-[#16191E] border border-[#232830]/70 flex items-center justify-between gap-3">
