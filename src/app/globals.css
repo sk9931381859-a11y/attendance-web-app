@@ -130,4 +130,20 @@ body {
   scrollbar-width: none !important;
 }
 
+/* Service Carousel Mobile Containment (max-width: 768px) */
+@media (max-width: 768px) {
+  .service-carousel-container {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    scroll-padding-left: 20px !important;
+  }
+
+  .service-carousel-card {
+    flex: 0 0 80vw !important;
+    max-width: 80vw !important;
+    box-sizing: border-box !important;
+    scroll-snap-align: start !important;
+  }
+}
+
 

@@ -335,7 +335,7 @@ export default function HomePage() {
               whileTap={{ scale: 0.98 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
               className="h-9 px-4 sm:px-5 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm shrink-0"
-              href="#cta"
+              href="/booking"
             >
               <span>Book a Strategy Call</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -354,16 +354,15 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Mobile Dropdown Menu Drawer */}
+        {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="md:hidden border-b border-[#E5E5EA] bg-[#F5F5F7]/95 backdrop-blur-lg px-5 py-4 space-y-3 shadow-lg"
+            className="md:hidden border-t border-[#E5E5EA] bg-white px-5 py-4 flex flex-col gap-3 shadow-lg"
           >
-            <div className="flex flex-col space-y-2.5 text-sm font-medium text-[#1D1D1F]">
+            <div className="flex flex-col gap-2.5 text-sm font-medium text-[#1D1D1F]">
               <a
                 href="#services"
                 onClick={() => setMobileMenuOpen(false)}
@@ -376,15 +375,15 @@ export default function HomePage() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="py-1.5 hover:text-[#0066CC] transition"
               >
-                Portfolio &amp; Showcase
+                Product Showcase
               </a>
-              <a
-                href="#cta"
+              <Link
+                href="/register"
                 onClick={() => setMobileMenuOpen(false)}
                 className="py-1.5 hover:text-[#0066CC] transition"
               >
-                Solutions
-              </a>
+                Register Organization
+              </Link>
               <Link
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
@@ -395,14 +394,14 @@ export default function HomePage() {
             </div>
 
             <div className="pt-2">
-              <a
-                href="#cta"
+              <Link
+                href="/booking"
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full py-3 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
               >
                 <span>Book a Strategy Call</span>
                 <ArrowRight className="w-3.5 h-3.5" />
-              </a>
+              </Link>
             </div>
           </motion.div>
         )}
@@ -438,7 +437,7 @@ export default function HomePage() {
             className="mt-8 flex flex-col sm:flex-row items-center gap-3.5 w-full max-w-md justify-center"
           >
             <motion.a
-              href="#cta"
+              href="/booking"
               whileHover={{ scale: 1.02, boxShadow: '0 10px 28px rgba(0, 102, 204, 0.3)' }}
               whileTap={{ scale: 0.98 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
@@ -534,18 +533,18 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Full-width Horizontal Scrolling Container: 85vw on mobile, pure native scroll-snap, hidden scrollbars */}
+          {/* Full-width Horizontal Scrolling Container: 80vw on mobile, pure native scroll-snap, hidden scrollbars */}
           <div
             ref={carouselRef}
             onScroll={handleCarouselScroll}
-            className="flex gap-4 sm:gap-6 overflow-x-auto px-5 sm:px-8 lg:px-12 pb-6 no-scrollbar [scroll-snap-type:x_mandatory] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            className="service-carousel-container flex gap-4 sm:gap-6 overflow-x-auto px-5 sm:px-8 lg:px-12 pb-6 no-scrollbar [scroll-snap-type:x_mandatory] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             style={{ scrollSnapType: 'x mandatory' }}
           >
             {services.map((item) => (
               <div
                 key={item.id}
-                className="min-w-[85vw] sm:min-w-[400px] max-w-[420px] h-[440px] bg-white rounded-[24px] p-7 sm:p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between shrink-0 scroll-snap-align-center transition-transform duration-300 hover:-translate-y-1"
-                style={{ scrollSnapAlign: 'center' }}
+                className="service-carousel-card min-w-[80vw] sm:min-w-[400px] max-w-[80vw] sm:max-w-[420px] h-[440px] bg-white rounded-[24px] p-7 sm:p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between shrink-0 scroll-snap-align-start sm:scroll-snap-align-center transition-transform duration-300 hover:-translate-y-1"
+                style={{ scrollSnapAlign: 'start' }}
               >
                 {/* Card Header */}
                 <div>
@@ -620,7 +619,7 @@ export default function HomePage() {
 
           <div className="mt-8 flex flex-col sm:flex-row items-center gap-3.5 w-full max-w-md justify-center">
             <motion.a
-              href="mailto:contact@zenithflowhq.com"
+              href="/booking"
               whileHover={{ scale: 1.02, boxShadow: '0 12px 32px rgba(0, 102, 204, 0.35)' }}
               whileTap={{ scale: 0.98 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
@@ -724,12 +723,12 @@ export default function HomePage() {
                   <span>Launch Web App</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </a>
-                <a
-                  href="mailto:contact@zenithflowhq.com?subject=Book%20Demo%20-%20Attendance%20Web%20App"
+                <Link
+                  href="/booking"
                   className="px-5 py-2.5 rounded-full bg-white hover:bg-[#F5F5F7] text-[#1D1D1F] border border-[#E5E5EA] text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
                 >
                   <span>Book Demo</span>
-                </a>
+                </Link>
               </div>
             </motion.div>
 
@@ -924,7 +923,7 @@ export default function HomePage() {
       {/* 7. Bottom-Fixed High-Conversion Mobile Sticky CTA Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white/90 backdrop-blur-[10px] border-t border-[#E5E5EA] p-3 px-5 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <motion.a
-          href="#cta"
+          href="/booking"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           className="w-full py-3.5 px-6 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"

@@ -246,12 +246,12 @@ export default function RegisterPage() {
                     </>
                   )}
                 </button>
-                <a
-                  href="mailto:contact@zenithflowhq.com?subject=Book%20Demo%20-%20Attendance%20Web%20App"
+                <Link
+                  href="/booking"
                   className="w-full sm:w-auto px-5 py-3 border border-gray-300 hover:border-gray-400 text-gray-700 font-semibold text-xs rounded-xl transition duration-150 flex items-center justify-center gap-1.5 shrink-0 hover:bg-gray-50"
                 >
                   <span>Book Demo</span>
-                </a>
+                </Link>
               </div>
             </form>
 
