@@ -97,3 +97,37 @@ body {
   animation: laser-scan 2.4s ease-in-out infinite;
 }
 
+/* Zenith Flow^HQ CSS-only Gradient Animation */
+@keyframes flowGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.flow-text-anim {
+  background: linear-gradient(90deg, #0066CC, #8B5CF6, #0066CC);
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: flowGradient 3.5s ease infinite;
+  display: inline-block;
+}
+
+/* Native iOS-style swipe mechanics with hidden scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+

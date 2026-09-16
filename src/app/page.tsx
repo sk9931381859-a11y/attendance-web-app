@@ -1,16 +1,35 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { motion, useInView, Variants } from 'framer-motion';
+import {
+  ArrowRight,
+  Rocket,
+  QrCode,
+  CreditCard,
+  Database,
+  Network,
+  Globe,
+  Server,
+  Smartphone,
+  RefreshCw,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  X,
+  Bot,
+  ShieldCheck,
+} from 'lucide-react';
 
-// --- Reusable Apple-Style Inline ZenithFlowHQ Neon SVG Logo ---
+// --- Inline ZenithFlowHQ Neon SVG Logo ---
 function ZenithFlowLogo({ idSuffix = '' }: { idSuffix?: string }) {
   const glowId = idSuffix ? `z-glow-${idSuffix}` : 'z-glow';
   const blurId = idSuffix ? `neon-blur-${idSuffix}` : 'neon-blur';
 
   return (
-    <svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+    <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
       <defs>
         <linearGradient id={glowId} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#00E5FF" />
@@ -31,7 +50,7 @@ function ZenithFlowLogo({ idSuffix = '' }: { idSuffix?: string }) {
       {/* Nodes (Dots) */}
       <circle cx="25" cy="25" r="4" fill="#00E5FF" />
       <circle cx="75" cy="25" r="4" fill="#00E5FF" />
-      <circle cx="25" cy="75" r="B200FF" />
+      <circle cx="25" cy="75" r="4" fill="#B200FF" />
       <circle cx="75" cy="75" r="4" fill="#B200FF" />
       <circle cx="50" cy="50" r="3" fill="#6677FF" />
       <circle cx="40" cy="25" r="2.5" fill="#00E5FF" />
@@ -90,27 +109,27 @@ function LightModePipelineVisualizer() {
           </svg>
         </div>
 
-        {/* 3 Floating Circles in Apple Light Mode */}
+        {/* 3 Floating Circles with Inline Lucide SVG Icons */}
         <div className="relative w-full flex items-start justify-between px-2 sm:px-4">
           <div className="relative z-10 flex flex-col items-center">
-            <div className="w-12 h-12 rounded-full bg-white border border-[#E5E5EA] shadow-sm flex items-center justify-center text-[#0066CC]">
-              <span className="material-symbols-outlined text-[20px]">credit_card</span>
+            <div className="w-11 h-11 rounded-full bg-white border border-[#E5E5EA] shadow-sm flex items-center justify-center text-[#0066CC]">
+              <CreditCard className="w-5 h-5 text-[#0066CC]" />
             </div>
             <span className="mt-1.5 text-[11px] font-semibold text-[#1D1D1F]">Stripe</span>
             <span className="text-[9px] font-mono text-[#86868B]">Inbound</span>
           </div>
 
           <div className="relative z-10 flex flex-col items-center">
-            <div className="w-12 h-12 rounded-full bg-white border border-[#E5E5EA] shadow-sm flex items-center justify-center text-[#00A2FF]">
-              <span className="material-symbols-outlined text-[20px]">database</span>
+            <div className="w-11 h-11 rounded-full bg-white border border-[#E5E5EA] shadow-sm flex items-center justify-center text-[#00A2FF]">
+              <Database className="w-5 h-5 text-[#00A2FF]" />
             </div>
             <span className="mt-1.5 text-[11px] font-semibold text-[#1D1D1F]">Postgres</span>
             <span className="text-[9px] font-mono text-[#86868B]">Sync</span>
           </div>
 
           <div className="relative z-10 flex flex-col items-center">
-            <div className="w-12 h-12 rounded-full bg-white border border-[#E5E5EA] shadow-sm flex items-center justify-center text-[#8A2BE2]">
-              <span className="material-symbols-outlined text-[20px]">hub</span>
+            <div className="w-11 h-11 rounded-full bg-white border border-[#E5E5EA] shadow-sm flex items-center justify-center text-[#8A2BE2]">
+              <Network className="w-5 h-5 text-[#8A2BE2]" />
             </div>
             <span className="mt-1.5 text-[11px] font-semibold text-[#1D1D1F]">Zenith</span>
             <span className="text-[9px] font-mono text-[#86868B]">Engine</span>
@@ -126,7 +145,7 @@ function LightModePipelineVisualizer() {
   );
 }
 
-// --- 5 Bento Service Cards Data ---
+// --- 5 Bento Service Cards Data with Lucide Icon Keys ---
 const services = [
   {
     id: 'service-01',
@@ -134,7 +153,7 @@ const services = [
     title: 'Websites & Apps',
     subtitle: 'Next.js 15, 100 Lighthouse & Motion',
     desc: 'We engineer high-performance, bespoke digital platforms designed to capture global audiences and accelerate your revenue growth.',
-    icon: 'language',
+    iconKey: 'globe',
     badge: 'Score: 100 Benchmark',
     metric: 'LCP < 0.6s • CLS 0.00',
     pill: 'Headless CMS Ready',
@@ -146,7 +165,7 @@ const services = [
     title: 'Custom Software',
     subtitle: 'Scalable Microservices & APIs',
     desc: 'Our developers build enterprise-grade, tailor-made systems that seamlessly adapt to your exact operational workflows without compromise.',
-    icon: 'dns',
+    iconKey: 'server',
     badge: 'SOC 2 Ready',
     metric: '4.2M req/sec SLA',
     pill: 'PostgreSQL Isolation',
@@ -158,7 +177,7 @@ const services = [
     title: 'Backend Automations',
     subtitle: 'SwiftUI, Jetpack Compose & Background Sync',
     desc: 'We construct resilient, invisible infrastructure that completely eliminates manual data handling and ensures flawless execution across multiple time zones.',
-    icon: 'devices',
+    iconKey: 'smartphone',
     badge: 'Native 60 FPS',
     metric: 'Offline-First DB',
     pill: 'Automated CI/CD',
@@ -170,7 +189,7 @@ const services = [
     title: 'SaaS Automations',
     subtitle: 'Custom CRM, ERP & Billing Engines',
     desc: 'We supercharge your software stack with intelligent bots, unified APIs, and automated billing that eliminate busywork along every step.',
-    icon: 'swap_horiz',
+    iconKey: 'refresh',
     badge: 'Zero Human Touch',
     metric: '99.99% Execution',
     pill: 'Unified Webhooks',
@@ -182,13 +201,30 @@ const services = [
     title: 'AI Agents & Workflows',
     subtitle: 'Autonomous Reasoning & Task Orchestration',
     desc: 'Deploy custom autonomous agents designed to handle customer engagement, complex code generation, and mission-critical automated pipelines 24/7.',
-    icon: 'spark',
+    iconKey: 'sparkles',
     badge: 'Autonomous AI',
     metric: 'Sub-second Inference',
     pill: 'Zero-Leak Guardrails',
     hasVisualizer: false,
   },
 ];
+
+// Helper to render Lucide service icons instantly at 0ms
+function renderServiceIcon(key: string) {
+  switch (key) {
+    case 'globe':
+      return <Globe className="w-5 h-5 text-[#0066CC]" />;
+    case 'server':
+      return <Server className="w-5 h-5 text-[#0066CC]" />;
+    case 'smartphone':
+      return <Smartphone className="w-5 h-5 text-[#0066CC]" />;
+    case 'refresh':
+      return <RefreshCw className="w-5 h-5 text-[#0066CC]" />;
+    case 'sparkles':
+    default:
+      return <Sparkles className="w-5 h-5 text-[#0066CC]" />;
+  }
+}
 
 // --- Hardware-Accelerated Framer Motion Variants ---
 const heroContainerVariants: Variants = {
@@ -238,11 +274,12 @@ const showcaseCardVariants: Variants = {
 
 export default function HomePage() {
   const [activeSlide, setActiveSlide] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const scrollCarousel = (direction: 'next' | 'prev') => {
     if (!carouselRef.current) return;
-    const cardWidth = 420;
+    const cardWidth = 400;
     const scrollAmount = direction === 'next' ? cardWidth : -cardWidth;
     carouselRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
   };
@@ -250,24 +287,24 @@ export default function HomePage() {
   const handleCarouselScroll = () => {
     if (!carouselRef.current) return;
     const scrollLeft = carouselRef.current.scrollLeft;
-    const cardWidth = 420;
+    const cardWidth = 360;
     const index = Math.round(scrollLeft / cardWidth);
     setActiveSlide(Math.min(Math.max(index, 0), services.length - 1));
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] font-sans antialiased selection:bg-[#0066CC]/20 selection:text-[#0066CC]">
-      {/* 1. Minimal Header with Apple Translucency */}
-      <header className="sticky top-0 z-50 w-full border-b border-[#E5E5EA]/80 bg-[#F5F5F7]/80 backdrop-blur-md transition-all">
+    <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] font-sans antialiased selection:bg-[#0066CC]/20 selection:text-[#0066CC] pb-24 md:pb-0">
+      {/* 1. Navbar: De-cluttered on Mobile with Hamburger Drawer & Zenith Flow^HQ Animated Branding */}
+      <header className="sticky top-0 z-40 w-full border-b border-[#E5E5EA]/80 bg-[#F5F5F7]/85 backdrop-blur-md transition-all">
         <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <a href="/" className="flex items-center gap-3 text-[#1D1D1F] group">
+          <div className="flex items-center gap-6 lg:gap-8">
+            <a href="/" className="flex items-center gap-2.5 sm:gap-3 text-[#1D1D1F] group">
               <ZenithFlowLogo idSuffix="nav" />
               <span
-                style={{ letterSpacing: '0.05em' }}
-                className="font-bold text-sm tracking-wider uppercase text-[#1D1D1F]"
+                style={{ letterSpacing: '0.04em' }}
+                className="font-bold text-xs sm:text-sm tracking-wider uppercase text-[#1D1D1F]"
               >
-                ZENITHFLOWHQ
+                Zenith <span className="flow-text-anim">Flow^</span>HQ
               </span>
             </a>
 
@@ -285,11 +322,11 @@ export default function HomePage() {
             </nav>
           </div>
 
-          {/* Action CTAs */}
-          <div className="flex items-center gap-3">
+          {/* Desktop Action CTAs */}
+          <div className="hidden md:flex items-center gap-3">
             <Link
               href="/login"
-              className="hidden sm:inline-flex text-xs font-medium text-[#86868B] hover:text-[#1D1D1F] px-3.5 py-1.5 transition-colors"
+              className="text-xs font-medium text-[#86868B] hover:text-[#1D1D1F] px-3.5 py-1.5 transition-colors"
             >
               Sign In
             </Link>
@@ -301,29 +338,84 @@ export default function HomePage() {
               href="#cta"
             >
               <span>Book a Strategy Call</span>
-              <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </motion.a>
           </div>
+
+          {/* Mobile Hamburger Toggle Button (Prevents Logo & Button Collision) */}
+          <div className="flex md:hidden items-center gap-2">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle mobile menu"
+              className="w-10 h-10 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center text-[#1D1D1F] shadow-xs active:scale-95 transition"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Dropdown Menu Drawer */}
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden border-b border-[#E5E5EA] bg-[#F5F5F7]/95 backdrop-blur-lg px-5 py-4 space-y-3 shadow-lg"
+          >
+            <div className="flex flex-col space-y-2.5 text-sm font-medium text-[#1D1D1F]">
+              <a
+                href="#services"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-1.5 hover:text-[#0066CC] transition"
+              >
+                Services
+              </a>
+              <a
+                href="#showcase"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-1.5 hover:text-[#0066CC] transition"
+              >
+                Portfolio &amp; Showcase
+              </a>
+              <a
+                href="#cta"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-1.5 hover:text-[#0066CC] transition"
+              >
+                Solutions
+              </a>
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-1.5 text-[#86868B] hover:text-[#1D1D1F] transition"
+              >
+                Staff Portal Sign In &rarr;
+              </Link>
+            </div>
+
+            <div className="pt-2">
+              <a
+                href="#cta"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full py-3 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
+              >
+                <span>Book a Strategy Call</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </motion.div>
+        )}
       </header>
 
-      {/* 2. Hero Section: Stagger-fade upward (y: 20 to y: 0, opacity: 0 to 1) over 0.6s with [0.16, 1, 0.3, 1] */}
-      <section className="relative pt-36 pb-20 px-5 sm:px-6 lg:px-8 bg-[#F5F5F7]">
+      {/* 2. Hero Section (Cleaned Up: Deleted redundant pill/badge sitting directly above H1) */}
+      <section className="relative pt-24 sm:pt-36 pb-16 sm:pb-20 px-5 sm:px-6 lg:px-8 bg-[#F5F5F7]">
         <motion.div
           className="max-w-4xl mx-auto flex flex-col items-center text-center"
           variants={heroContainerVariants}
           initial="hidden"
           animate="visible"
         >
-          {/* Subtle Label Pill */}
-          <motion.div
-            variants={heroItemVariants}
-            className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-[#E5E5EA] text-xs font-medium text-[#86868B] shadow-sm mb-6"
-          >
-            <span className="w-2 h-2 rounded-full bg-[#0066CC]"></span>
-            <span>Scale Without The Overhead</span>
-          </motion.div>
-
           {/* Massive Heavy H1 with Subtle Gradient Text-Clip */}
           <motion.h1
             variants={heroItemVariants}
@@ -353,7 +445,7 @@ export default function HomePage() {
               className="w-full sm:w-auto px-7 py-3.5 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm"
             >
               <span>Schedule a Conversation</span>
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              <ArrowRight className="w-4 h-4" />
             </motion.a>
             <motion.a
               href="#services"
@@ -369,7 +461,7 @@ export default function HomePage() {
           {/* 4 Bento Stat Badges */}
           <motion.div
             variants={heroItemVariants}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full mt-16 max-w-4xl"
+            className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 sm:gap-4 w-full mt-12 sm:mt-16 max-w-4xl"
           >
             <div className="bg-white rounded-[24px] p-5 sm:p-6 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-left">
               <div className="text-2xl sm:text-3xl font-bold text-[#1D1D1F] tracking-tight">
@@ -399,7 +491,7 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* 3. Services Carousel Section: Scroll-triggered fade-in to the entire container */}
+      {/* 3. Services Carousel Section: min-width: 85vw on Mobile, Hidden Scrollbars */}
       <section className="py-16 bg-[#F5F5F7]" id="services">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -412,7 +504,7 @@ export default function HomePage() {
               <div className="text-xs font-semibold uppercase tracking-wider text-[#0066CC] mb-2">
                 Capabilities &amp; Engineering
               </div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-[#1D1D1F] tracking-tight">
+              <h2 className="text-2xl sm:text-4xl font-bold text-[#1D1D1F] tracking-tight">
                 Bespoke Services. Built to Scale.
               </h2>
             </div>
@@ -427,7 +519,7 @@ export default function HomePage() {
                 aria-label="Previous service"
                 className="w-10 h-10 rounded-full bg-white border border-[#E5E5EA] shadow-sm flex items-center justify-center text-[#1D1D1F] hover:bg-[#EBEBF0]"
               >
-                <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+                <ChevronLeft className="w-5 h-5" />
               </motion.button>
               <motion.button
                 onClick={() => scrollCarousel('next')}
@@ -437,22 +529,22 @@ export default function HomePage() {
                 aria-label="Next service"
                 className="w-10 h-10 rounded-full bg-white border border-[#E5E5EA] shadow-sm flex items-center justify-center text-[#1D1D1F] hover:bg-[#EBEBF0]"
               >
-                <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+                <ChevronRight className="w-5 h-5" />
               </motion.button>
             </div>
           </div>
 
-          {/* Full-width Horizontal Scrolling Container with Native Scroll-Snap (NO card animation) */}
+          {/* Full-width Horizontal Scrolling Container: 85vw on mobile, pure native scroll-snap, hidden scrollbars */}
           <div
             ref={carouselRef}
             onScroll={handleCarouselScroll}
-            className="flex gap-6 overflow-x-auto px-5 sm:px-8 lg:px-12 pb-6 [scroll-snap-type:x_mandatory] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            className="flex gap-4 sm:gap-6 overflow-x-auto px-5 sm:px-8 lg:px-12 pb-6 no-scrollbar [scroll-snap-type:x_mandatory] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             style={{ scrollSnapType: 'x mandatory' }}
           >
             {services.map((item) => (
               <div
                 key={item.id}
-                className="min-w-[340px] sm:min-w-[400px] max-w-[420px] h-[440px] bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between shrink-0 scroll-snap-align-center transition-transform duration-300 hover:-translate-y-1"
+                className="min-w-[85vw] sm:min-w-[400px] max-w-[420px] h-[440px] bg-white rounded-[24px] p-7 sm:p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between shrink-0 scroll-snap-align-center transition-transform duration-300 hover:-translate-y-1"
                 style={{ scrollSnapAlign: 'center' }}
               >
                 {/* Card Header */}
@@ -461,16 +553,8 @@ export default function HomePage() {
                     <span className="text-xs font-mono font-semibold text-[#0066CC] px-2.5 py-1 rounded-full bg-[#0066CC]/10">
                       SERVICE {item.num}
                     </span>
-                    <div className="w-10 h-10 rounded-full bg-[#F5F5F7] border border-[#E5E5EA] flex items-center justify-center text-[#1D1D1F]">
-                      {item.icon === 'spark' ? (
-                        <svg className="w-5 h-5 fill-current text-[#0066CC]" viewBox="0 0 24 24">
-                          <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
-                        </svg>
-                      ) : (
-                        <span className="material-symbols-outlined text-[22px] text-[#0066CC]">
-                          {item.icon}
-                        </span>
-                      )}
+                    <div className="w-10 h-10 rounded-full bg-[#F5F5F7] border border-[#E5E5EA] flex items-center justify-center">
+                      {renderServiceIcon(item.iconKey)}
                     </div>
                   </div>
 
@@ -520,17 +604,17 @@ export default function HomePage() {
       </section>
 
       {/* 4. Centered CTA Band (Pure White Background) */}
-      <section className="w-full bg-white py-24 px-5 sm:px-6 lg:px-8 border-y border-[#E5E5EA]" id="cta">
+      <section className="w-full bg-white py-20 sm:py-24 px-5 sm:px-6 lg:px-8 border-y border-[#E5E5EA]" id="cta">
         <div className="max-w-3xl mx-auto flex flex-col items-center text-center">
           <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA] flex items-center justify-center text-[#0066CC] shadow-sm mb-6">
-            <span className="material-symbols-outlined text-[28px]">rocket_launch</span>
+            <Rocket className="w-7 h-7 text-[#0066CC]" />
           </div>
 
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#1D1D1F] leading-tight">
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#1D1D1F] leading-tight">
             Ready to automate and scale your operations?
           </h2>
 
-          <p className="mt-4 text-base sm:text-lg text-[#86868B] max-w-xl leading-relaxed">
+          <p className="mt-4 text-sm sm:text-lg text-[#86868B] max-w-xl leading-relaxed">
             Partner with an elite engineering team that builds scalable software and autonomous systems tailored to your unique business logic.
           </p>
 
@@ -543,7 +627,7 @@ export default function HomePage() {
               className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm"
             >
               <span>Schedule a Conversation</span>
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              <ArrowRight className="w-4 h-4" />
             </motion.a>
             <motion.a
               href="#showcase"
@@ -558,17 +642,17 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. Product Showcase: Scale 0.95 to 1.0 (opacity 0 to 1) with 0.1s stagger & hover scale 1.02 */}
-      <section className="py-24 px-5 sm:px-6 lg:px-8 bg-[#F5F5F7]" id="showcase">
+      {/* 5. Product Showcase: 2x2 Grid with Route Links & Book Demo Buttons */}
+      <section className="py-20 sm:py-24 px-5 sm:px-6 lg:px-8 bg-[#F5F5F7]" id="showcase">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-16">
+          <div className="text-center max-w-2xl mx-auto mb-14 sm:mb-16">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#0066CC]">
               Product Showcase
             </span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#1D1D1F] tracking-tight mt-2">
+            <h2 className="text-2xl sm:text-4xl font-bold text-[#1D1D1F] tracking-tight mt-2">
               Engineered with Precision
             </h2>
-            <p className="text-[#86868B] text-sm sm:text-base mt-3">
+            <p className="text-[#86868B] text-xs sm:text-base mt-2.5">
               Explore live systems, autonomous pipelines, and mobile-first products built for global enterprise scale.
             </p>
           </div>
@@ -581,7 +665,7 @@ export default function HomePage() {
             whileInView="visible"
             viewport={{ once: true, margin: '-60px' }}
           >
-            {/* Item 1: Attendance Web App & Kiosk Wireframe */}
+            {/* Item 1: Attendance Web App & Kiosk Wireframe with Register Route & Book Demo Buttons */}
             <motion.div
               variants={showcaseCardVariants}
               whileHover={{
@@ -589,7 +673,7 @@ export default function HomePage() {
                 boxShadow: '0 12px 36px rgba(0, 0, 0, 0.08)',
                 transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] },
               }}
-              className="bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between"
+              className="bg-white rounded-[24px] p-7 sm:p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -604,8 +688,8 @@ export default function HomePage() {
                 </p>
               </div>
 
-              {/* Abstract Light-Mode Micro-UI Wireframe */}
-              <div className="mt-6 p-5 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA]">
+              {/* Abstract Light-Mode Micro-UI Wireframe with Inline Lucide SVG */}
+              <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA]">
                 <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#E5E5EA] text-xs">
                   <span className="font-semibold text-[#1D1D1F] flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-ping"></span>
@@ -615,8 +699,8 @@ export default function HomePage() {
                 </div>
                 <div className="grid grid-cols-3 gap-3 items-center">
                   <div className="w-full aspect-square rounded-xl bg-white border border-[#E5E5EA] flex flex-col items-center justify-center p-2 shadow-sm">
-                    <span className="material-symbols-outlined text-[#1D1D1F] text-[32px]">qr_code_2</span>
-                    <span className="text-[9px] font-mono text-[#86868B] mt-0.5">Scan Code</span>
+                    <QrCode className="w-8 h-8 text-[#1D1D1F]" />
+                    <span className="text-[9px] font-mono text-[#86868B] mt-1">Scan Code</span>
                   </div>
                   <div className="col-span-2 space-y-2 text-xs">
                     <div className="bg-white p-2.5 rounded-lg border border-[#E5E5EA] flex items-center justify-between">
@@ -630,6 +714,23 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
+
+              {/* Action Buttons: Primary Register Link & Secondary Book Demo Outline */}
+              <div className="mt-6 pt-4 border-t border-[#F5F5F7] flex flex-wrap items-center gap-2.5">
+                <a
+                  href="https://zenithflowhq.com/register"
+                  className="px-5 py-2.5 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
+                >
+                  <span>Launch Web App</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+                <a
+                  href="mailto:contact@zenithflowhq.com?subject=Book%20Demo%20-%20Attendance%20Web%20App"
+                  className="px-5 py-2.5 rounded-full bg-white hover:bg-[#F5F5F7] text-[#1D1D1F] border border-[#E5E5EA] text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
+                >
+                  <span>Book Demo</span>
+                </a>
+              </div>
             </motion.div>
 
             {/* Item 2: Autonomous Revenue & Billing Engine */}
@@ -640,7 +741,7 @@ export default function HomePage() {
                 boxShadow: '0 12px 36px rgba(0, 0, 0, 0.08)',
                 transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] },
               }}
-              className="bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between"
+              className="bg-white rounded-[24px] p-7 sm:p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -656,7 +757,7 @@ export default function HomePage() {
               </div>
 
               {/* Abstract Light-Mode Graph & Telemetry Bars */}
-              <div className="mt-6 p-5 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA]">
+              <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA]">
                 <div className="flex items-center justify-between mb-4 text-xs">
                   <span className="font-semibold text-[#1D1D1F]">Real-time Transaction Volume</span>
                   <span className="font-mono text-[#0066CC] font-bold">+184.2% YoY</span>
@@ -687,7 +788,7 @@ export default function HomePage() {
                 boxShadow: '0 12px 36px rgba(0, 0, 0, 0.08)',
                 transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] },
               }}
-              className="bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between"
+              className="bg-white rounded-[24px] p-7 sm:p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -703,7 +804,7 @@ export default function HomePage() {
               </div>
 
               {/* Abstract Light-Mode Telemetry Dial & Node Map */}
-              <div className="mt-6 p-5 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA]">
+              <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA]">
                 <div className="flex items-center justify-between mb-3 text-xs">
                   <span className="font-semibold text-[#1D1D1F]">Global Edge Health</span>
                   <span className="text-[#16a34a] font-semibold flex items-center gap-1">
@@ -732,7 +833,7 @@ export default function HomePage() {
                 boxShadow: '0 12px 36px rgba(0, 0, 0, 0.08)',
                 transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] },
               }}
-              className="bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between"
+              className="bg-white rounded-[24px] p-7 sm:p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
@@ -747,8 +848,8 @@ export default function HomePage() {
                 </p>
               </div>
 
-              {/* Abstract Light-Mode Node Workflow Wireframe */}
-              <div className="mt-6 p-5 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA]">
+              {/* Abstract Light-Mode Node Workflow Wireframe with Lucide Icons */}
+              <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA]">
                 <div className="flex items-center justify-between mb-3 text-xs">
                   <span className="font-semibold text-[#1D1D1F]">Active Autonomous Squad</span>
                   <span className="text-[#0066CC] font-mono text-[11px]">Sprint 24 Passed</span>
@@ -756,14 +857,14 @@ export default function HomePage() {
                 <div className="space-y-2 text-xs">
                   <div className="bg-white p-2.5 rounded-xl border border-[#E5E5EA] flex items-center justify-between">
                     <span className="flex items-center gap-2 text-[#1D1D1F]">
-                      <span className="material-symbols-outlined text-[16px] text-[#0066CC]">smart_toy</span>
+                      <Bot className="w-4 h-4 text-[#0066CC]" />
                       Playwright E2E Test Suite
                     </span>
                     <span className="font-semibold text-[#16a34a]">100% Passing</span>
                   </div>
                   <div className="bg-white p-2.5 rounded-xl border border-[#E5E5EA] flex items-center justify-between">
                     <span className="flex items-center gap-2 text-[#1D1D1F]">
-                      <span className="material-symbols-outlined text-[16px] text-[#0066CC]">verified_user</span>
+                      <ShieldCheck className="w-4 h-4 text-[#0066CC]" />
                       Security &amp; Vulnerability Gate
                     </span>
                     <span className="font-semibold text-[#16a34a]">0 Alerts</span>
@@ -775,17 +876,17 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6. Minimalist Centered Footer */}
+      {/* 6. Minimalist Centered Footer with Animated Zenith Flow^HQ Branding */}
       <footer className="w-full bg-[#F5F5F7] py-16 px-5 sm:px-6 lg:px-8 border-t border-[#E5E5EA]">
         <div className="max-w-5xl mx-auto flex flex-col items-center text-center">
           {/* Centered Logo & Branding */}
-          <div className="flex items-center justify-center gap-3 mb-6">
+          <div className="flex items-center justify-center gap-2.5 sm:gap-3 mb-6">
             <ZenithFlowLogo idSuffix="footer" />
             <span
-              style={{ letterSpacing: '0.05em' }}
-              className="font-bold text-base tracking-wider uppercase text-[#1D1D1F]"
+              style={{ letterSpacing: '0.04em' }}
+              className="font-bold text-sm sm:text-base tracking-wider uppercase text-[#1D1D1F]"
             >
-              ZENITHFLOWHQ
+              Zenith <span className="flow-text-anim">Flow^</span>HQ
             </span>
           </div>
 
@@ -793,7 +894,7 @@ export default function HomePage() {
             The modern software studio engineering bespoke platforms, autonomous workflows, and cloud architecture for international businesses.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-[#86868B] mb-10">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-[#86868B] mb-10">
             <a href="#services" className="hover:text-[#1D1D1F] transition-colors">
               Websites &amp; Apps
             </a>
@@ -815,10 +916,23 @@ export default function HomePage() {
           </div>
 
           <div className="text-[11px] text-[#86868B]">
-            &copy; {new Date().getFullYear()} ZenithFlowHQ. All rights reserved.
+            &copy; {new Date().getFullYear()} Zenith Flow^HQ. All rights reserved.
           </div>
         </div>
       </footer>
+
+      {/* 7. Bottom-Fixed High-Conversion Mobile Sticky CTA Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white/90 backdrop-blur-[10px] border-t border-[#E5E5EA] p-3 px-5 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <motion.a
+          href="#cta"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="w-full py-3.5 px-6 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
+        >
+          <span>Book a Strategy Call</span>
+          <ArrowRight className="w-4 h-4" />
+        </motion.a>
+      </div>
     </div>
   );
 }

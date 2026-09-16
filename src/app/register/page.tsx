@@ -227,24 +227,32 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Submit CTA Button */}
-              <button
-                type="submit"
-                disabled={isPending}
-                className="w-full mt-2 py-3 bg-black hover:bg-gray-800 disabled:opacity-60 text-white font-semibold text-xs rounded-xl shadow-md transition duration-150 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                {isPending ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                    <span>Provisioning Tenant Workspace...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Create Organization Workspace</span>
-                    <ArrowRight size={15} />
-                  </>
-                )}
-              </button>
+              {/* Actions: Submit & Book Demo Button */}
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 mt-2">
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="w-full py-3 bg-[#0066CC] hover:bg-[#0077ED] disabled:opacity-60 text-white font-semibold text-xs rounded-xl shadow-md transition duration-150 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isPending ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <span>Provisioning Tenant Workspace...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Create Organization Workspace</span>
+                      <ArrowRight size={15} />
+                    </>
+                  )}
+                </button>
+                <a
+                  href="mailto:contact@zenithflowhq.com?subject=Book%20Demo%20-%20Attendance%20Web%20App"
+                  className="w-full sm:w-auto px-5 py-3 border border-gray-300 hover:border-gray-400 text-gray-700 font-semibold text-xs rounded-xl transition duration-150 flex items-center justify-center gap-1.5 shrink-0 hover:bg-gray-50"
+                >
+                  <span>Book Demo</span>
+                </a>
+              </div>
             </form>
 
             {/* Bottom Link to Sign In */}
