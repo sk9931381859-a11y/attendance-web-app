@@ -345,12 +345,12 @@ export default function HomePage() {
             </a>
             <Link
               href="/login"
-              className="text-xs font-mono text-[#8B909A] hover:text-white px-3 py-1.5 rounded-lg border border-[#232830] hover:border-[#6366F1]/50 transition-colors"
+              className="hidden sm:inline-flex text-xs font-mono text-[#8B909A] hover:text-white px-3 py-1.5 rounded-lg border border-[#232830] hover:border-[#6366F1]/50 transition-colors"
             >
               Sign In
             </Link>
             <a
-              className="h-9 px-4 rounded-lg bg-[#6366F1] hover:bg-[#8B5CF6] text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-indigo-500/20 transition-all"
+              className="h-9 px-3 sm:px-4 rounded-lg bg-[#6366F1] hover:bg-[#8B5CF6] text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-indigo-500/20 transition-all shrink-0"
               href="#contact"
             >
               <span>Book a Strategy Call</span>
