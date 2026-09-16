@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
+  themeColor: "#F5F5F7",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -27,14 +27,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#000000" />
+        <meta name="theme-color" content="#F5F5F7" />
       </head>
-      <body className="antialiased min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      <body className="antialiased min-h-screen bg-[#F5F5F7] text-[#1D1D1F] flex flex-col">
         <ServiceWorkerRegister />
         {children}
       </body>
