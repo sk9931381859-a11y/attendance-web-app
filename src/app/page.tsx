@@ -318,7 +318,7 @@ export default function HomePage() {
                 </span>
               </div>
               <span className="font-semibold text-base sm:text-lg tracking-tight text-white flex items-center gap-1.5 shrink-0">
-                KINETIC <span className="text-[#06B6D4] font-mono text-sm">/ STUDIO</span>
+                KINETIC <span className="hidden sm:inline text-[#06B6D4] font-mono text-sm">/ STUDIO</span>
                 <span className="hidden sm:inline-block font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-[#16191E] border border-[#6366F1]/30 text-[#06B6D4] font-medium ml-1">
                   {'AGENCY // PRODUCT LAB'}
                 </span>
