@@ -311,17 +311,44 @@ export default function HomePage() {
       <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b border-[#232830] bg-[#0B0D10]/85 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto h-full px-5 sm:px-6 lg:px-8 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <a className="flex items-center gap-2.5 group" href="/">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#6366F1] to-[#06B6D4] flex items-center justify-center p-0.5 shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-                <span className="material-symbols-outlined text-white text-[20px] font-bold">
-                  terminal
-                </span>
-              </div>
-              <span className="font-semibold text-base sm:text-lg tracking-tight text-white flex items-center gap-1.5 shrink-0">
-                KINETIC <span className="hidden sm:inline text-[#06B6D4] font-mono text-sm">/ STUDIO</span>
-                <span className="hidden sm:inline-block font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-[#16191E] border border-[#6366F1]/30 text-[#06B6D4] font-medium ml-1">
-                  {'AGENCY // PRODUCT LAB'}
-                </span>
+            <a
+              className="flex items-center gap-[12px] group shrink-0"
+              style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
+              href="/"
+            >
+              <svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+                <defs>
+                  <linearGradient id="z-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#00E5FF" />
+                    <stop offset="100%" stopColor="#B200FF" />
+                  </linearGradient>
+                  <filter id="neon-blur" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge>
+                      <feMergeNode in="blur" />
+                      <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                  </filter>
+                </defs>
+                {/* The Z Structure */}
+                <path d="M25 25 H75 L25 75 H75" stroke="url(#z-glow)" strokeWidth="6" strokeLinejoin="round" filter="url(#neon-blur)" />
+                {/* Internal Network Lines */}
+                <path d="M25 25 L50 50 L75 25 M25 75 L50 50 L75 75 M40 25 L25 50 L60 75" stroke="url(#z-glow)" strokeWidth="2" opacity="0.6" />
+                {/* Nodes (Dots) */}
+                <circle cx="25" cy="25" r="4" fill="#00E5FF" />
+                <circle cx="75" cy="25" r="4" fill="#00E5FF" />
+                <circle cx="25" cy="75" r="4" fill="#B200FF" />
+                <circle cx="75" cy="75" r="4" fill="#B200FF" />
+                <circle cx="50" cy="50" r="3" fill="#6677FF" />
+                <circle cx="40" cy="25" r="2.5" fill="#00E5FF" />
+                <circle cx="60" cy="75" r="2.5" fill="#B200FF" />
+                <circle cx="25" cy="50" r="2.5" fill="#33AAFF" />
+              </svg>
+              <span
+                className="uppercase font-bold tracking-wide tracking-[0.05em] text-white text-base sm:text-lg shrink-0"
+                style={{ letterSpacing: '0.05em' }}
+              >
+                ZENITHFLOWHQ
               </span>
             </a>
             <div className="hidden md:flex items-center gap-1 text-xs font-mono text-[#555A64]">
@@ -1177,7 +1204,7 @@ export default function HomePage() {
                             <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80"></div>
                             <div className="w-2.5 h-2.5 rounded-full bg-[#06B6D4]"></div>
                           </div>
-                          <span className="text-[#8B909A] ml-2">kinetic-squad-manifest.json</span>
+                          <span className="text-[#8B909A] ml-2">zenithflow-squad-manifest.json</span>
                         </div>
                         <span className="text-[#06B6D4]">Senior Squad Active</span>
                       </div>
@@ -1269,19 +1296,50 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 flex flex-col gap-8 sm:gap-10">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 text-sm">
             <div className="col-span-2 flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-[#6366F1] flex items-center justify-center p-0.5">
-                  <span className="material-symbols-outlined text-white text-[16px] font-bold">
-                    terminal
-                  </span>
-                </div>
-                <span className="font-bold text-white tracking-tight">KINETIC / STUDIO</span>
+              <div
+                className="flex items-center gap-[12px]"
+                style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
+              >
+                <svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+                  <defs>
+                    <linearGradient id="z-glow-footer" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#00E5FF" />
+                      <stop offset="100%" stopColor="#B200FF" />
+                    </linearGradient>
+                    <filter id="neon-blur-footer" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="3" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  {/* The Z Structure */}
+                  <path d="M25 25 H75 L25 75 H75" stroke="url(#z-glow-footer)" strokeWidth="6" strokeLinejoin="round" filter="url(#neon-blur-footer)" />
+                  {/* Internal Network Lines */}
+                  <path d="M25 25 L50 50 L75 25 M25 75 L50 50 L75 75 M40 25 L25 50 L60 75" stroke="url(#z-glow-footer)" strokeWidth="2" opacity="0.6" />
+                  {/* Nodes (Dots) */}
+                  <circle cx="25" cy="25" r="4" fill="#00E5FF" />
+                  <circle cx="75" cy="25" r="4" fill="#00E5FF" />
+                  <circle cx="25" cy="75" r="4" fill="#B200FF" />
+                  <circle cx="75" cy="75" r="4" fill="#B200FF" />
+                  <circle cx="50" cy="50" r="3" fill="#6677FF" />
+                  <circle cx="40" cy="25" r="2.5" fill="#00E5FF" />
+                  <circle cx="60" cy="75" r="2.5" fill="#B200FF" />
+                  <circle cx="25" cy="50" r="2.5" fill="#33AAFF" />
+                </svg>
+                <span
+                  className="uppercase font-bold tracking-wide tracking-[0.05em] text-white text-base sm:text-lg shrink-0"
+                  style={{ letterSpacing: '0.05em' }}
+                >
+                  ZENITHFLOWHQ
+                </span>
               </div>
               <p className="text-xs text-[#8B909A] max-w-sm leading-relaxed">
                 The engineering studio building bespoke software and intelligent automations for global businesses.
               </p>
               <div className="flex items-center gap-4 text-xs font-mono text-[#555A64]">
-                <span>© 2026 Kinetic Studio Inc.</span>
+                <span>© 2026 ZenithFlowHQ.</span>
                 <span>•</span>
                 <span>All rights reserved.</span>
               </div>
