@@ -253,38 +253,47 @@ export default function HomePage() {
   const navItems = [
     {
       id: 'service-1',
-      number: '01 // WEB ARCHITECTURE',
-      title: 'Web Architecture & Exp.',
+      number: '01 // WEBSITES & APPS',
+      title: 'Websites & Apps',
       subtitle: 'Next.js, 100 Lighthouse & motion',
       icon: 'language',
     },
     {
       id: 'service-2',
       number: '02 // CUSTOM SOFTWARE',
-      title: 'SaaS & Cloud Platforms',
+      title: 'Custom Software',
       subtitle: 'Scalable microservices & APIs',
       icon: 'dns',
     },
     {
       id: 'service-3',
-      number: '03 // MOBILE APPS',
-      title: 'Native iOS & Android',
+      number: '03 // BACKEND AUTOMATIONS',
+      title: 'Backend Automations',
       subtitle: '60 FPS Flutter, Swift & React Native',
       icon: 'devices',
     },
     {
       id: 'service-4',
-      number: '04 // AUTOMATIONS',
-      title: 'Business Automations',
+      number: '04 // SAAS AUTOMATIONS',
+      title: 'SaaS Automations',
       subtitle: 'AI workflows, CRM & data pipelines',
       icon: 'schema',
     },
     {
       id: 'service-5',
-      number: '05 // SPRINTS & SLAS',
-      title: 'Enterprise Product Squads',
-      subtitle: 'Dedicated dev squads & SOC2 guarantees',
-      icon: 'verified',
+      number: '05 // AI AGENTS & WORKFLOWS',
+      title: 'AI Agents & Workflows',
+      subtitle: 'Autonomous workforce & reasoning pipelines',
+      icon: (
+        <svg
+          className="w-[18px] h-[18px]"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
+        </svg>
+      ),
     },
   ];
 
@@ -344,7 +353,7 @@ export default function HomePage() {
               className="h-9 px-4 rounded-lg bg-[#6366F1] hover:bg-[#8B5CF6] text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-indigo-500/20 transition-all"
               href="#contact"
             >
-              <span>Book a Project</span>
+              <span>Book a Strategy Call</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
             </a>
           </div>
@@ -367,14 +376,13 @@ export default function HomePage() {
               <span className="tracking-wider">FULL-CYCLE DIGITAL PRODUCT STUDIO</span>
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white leading-[1.15]">
-              We engineer{' '}
+              Scale{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#06B6D4] via-[#6366F1] to-[#8B5CF6]">
-                high-impact digital products
-              </span>{' '}
-              &amp; automations.
+                Without The Overhead.
+              </span>
             </h1>
             <p className="mt-4 text-[#8B909A] text-base lg:text-lg leading-relaxed max-w-xl">
-              Full-cycle digital agency building high-converting websites, bespoke enterprise software, native iOS/Android apps, and autonomous business workflows.
+              We build bespoke software and autonomous systems that drive international revenue, eliminate operational bottlenecks, and adapt exactly to how you do business.
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -454,9 +462,13 @@ export default function HomePage() {
                             : 'bg-[#06B6D4]/10 border-[#06B6D4]/20 text-[#06B6D4] group-hover:scale-105'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-[18px]">
-                          {item.icon}
-                        </span>
+                        {typeof item.icon === 'string' ? (
+                          <span className="material-symbols-outlined text-[18px]">
+                            {item.icon}
+                          </span>
+                        ) : (
+                          item.icon
+                        )}
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -584,14 +596,14 @@ export default function HomePage() {
                           SERVICE 01
                         </span>
                         <span className="text-xs font-mono text-[#555A64] tracking-wider">
-                          WEB ARCHITECTURE &amp; EXP
+                          WEBSITES &amp; APPS
                         </span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#06B6D4]/10 text-[#06B6D4] border border-[#06B6D4]/20">
                           {isExpanded ? 'Full View' : 'Half View'}
                         </span>
                       </div>
                       <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#06B6D4] transition-colors">
-                        Web Architecture &amp; Experiences
+                        Websites &amp; Apps
                       </h2>
                     </div>
                     <div className="flex items-center gap-3">
@@ -620,7 +632,7 @@ export default function HomePage() {
                     }`}
                   >
                     <p className="mt-6 text-base text-[#8B909A] leading-relaxed max-w-2xl">
-                      We engineer high-converting marketing sites and ultra-responsive web applications using Next.js, React Server Components, Tailwind CSS, and WebGL physics engines.
+                      We engineer high-performance, bespoke digital platforms designed to capture global audiences and accelerate your revenue growth.
                     </p>
                     <div className="mt-8 rounded-2xl bg-[#111419]/80 border border-[#232830] p-6 flex flex-col gap-4">
                       <div className="flex items-center justify-between pb-3 border-b border-[#232830]/60">
@@ -726,7 +738,7 @@ export default function HomePage() {
                         </span>
                       </div>
                       <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#6366F1] transition-colors">
-                        Custom Software &amp; Cloud Platforms
+                        Custom Software
                       </h2>
                     </div>
                     <div className="flex items-center gap-3">
@@ -755,7 +767,7 @@ export default function HomePage() {
                     }`}
                   >
                     <p className="mt-6 text-base text-[#8B909A] leading-relaxed max-w-2xl">
-                      We design and engineer bespoke enterprise systems, transactional cloud platforms, multi-tenant databases, and high-concurrency microservices tailored to your exact business domain.
+                      Our developers build enterprise-grade, tailor-made systems that seamlessly adapt to your exact operational workflows without compromise.
                     </p>
                     <div className="mt-8 rounded-2xl bg-[#111419]/80 border border-[#232830] p-6 flex flex-col gap-5">
                       <div className="bg-[#0B0D10]/90 p-4 rounded-xl border border-[#232830]/80 flex items-center justify-between gap-3">
@@ -849,14 +861,14 @@ export default function HomePage() {
                           SERVICE 03
                         </span>
                         <span className="text-xs font-mono text-[#555A64] tracking-wider">
-                          NATIVE &amp; CROSS-PLATFORM
+                          BACKEND AUTOMATIONS
                         </span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#06B6D4]/10 text-[#06B6D4] border border-[#06B6D4]/20">
                           {isExpanded ? 'Full View' : 'Half View'}
                         </span>
                       </div>
                       <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#06B6D4] transition-colors">
-                        Mobile Application Development
+                        Backend Automations
                       </h2>
                     </div>
                     <div className="flex items-center gap-3">
@@ -884,7 +896,7 @@ export default function HomePage() {
                     }`}
                   >
                     <p className="mt-6 text-base text-[#8B909A] leading-relaxed max-w-2xl">
-                      We build frictionless, offline-first iOS and Android applications. From Swift and Kotlin to React Native and Flutter, we deliver intuitive user experiences with fluid 60/120 FPS animations.
+                      We construct resilient, invisible infrastructure that completely eliminates manual data handling and ensures flawless execution across multiple time zones.
                     </p>
 
                     <div className="mt-8 rounded-2xl bg-[#111419]/80 border border-[#232830] p-6 flex flex-col gap-5">
@@ -977,14 +989,14 @@ export default function HomePage() {
                           SERVICE 04
                         </span>
                         <span className="text-xs font-mono text-[#555A64] tracking-wider">
-                          AUTOMATION &amp; WORKFLOWS
+                          SAAS AUTOMATIONS
                         </span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#6366F1]/10 text-[#6366F1] border border-[#6366F1]/20">
                           {isExpanded ? 'Full View' : 'Half View'}
                         </span>
                       </div>
                       <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#6366F1] transition-colors">
-                        Business Automations &amp; AI Pipelines
+                        SaaS Automations
                       </h2>
                     </div>
                     <div className="flex items-center gap-3">
@@ -1012,7 +1024,7 @@ export default function HomePage() {
                     }`}
                   >
                     <p className="mt-6 text-base text-[#8B909A] leading-relaxed max-w-2xl">
-                      We eliminate repetitive operations by chaining intelligent AI agents, custom webhooks, ERP/CRM syncs, and financial data pipelines into seamless autonomous engines.
+                      We synchronize your disparate cloud applications into a unified, intelligent ecosystem that scales effortlessly alongside your international expansion.
                     </p>
 
                     {/* Automations 3 Floating Circles & Animated SVG Line */}
@@ -1116,19 +1128,22 @@ export default function HomePage() {
                           SERVICE 05
                         </span>
                         <span className="text-xs font-mono text-[#555A64] tracking-wider">
-                          AGENCY ENGAGEMENT
+                          AI AGENTS &amp; WORKFLOWS
                         </span>
                         <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#8B5CF6]/10 text-[#8B5CF6] border border-[#8B5CF6]/20">
                           {isExpanded ? 'Full View' : 'Half View'}
                         </span>
                       </div>
                       <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#8B5CF6] transition-colors">
-                        Dedicated Engineering Sprints &amp; SLAs
+                        AI Agents &amp; Workflows
                       </h2>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="hidden sm:flex font-mono text-xs text-[#8B5CF6] bg-[#8B5CF6]/10 px-3.5 py-1.5 rounded-full border border-[#8B5CF6]/20 font-semibold">
-                        Bi-Weekly Deployments
+                      <div className="hidden sm:flex font-mono text-xs text-[#8B5CF6] bg-[#8B5CF6]/10 px-3.5 py-1.5 rounded-full border border-[#8B5CF6]/20 font-semibold items-center gap-1.5">
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
+                        </svg>
+                        <span>AI Agents &amp; Workflows</span>
                       </div>
                       <button
                         aria-label="Toggle section expansion"
@@ -1151,7 +1166,7 @@ export default function HomePage() {
                     }`}
                   >
                     <p className="mt-6 text-base text-[#8B909A] leading-relaxed max-w-2xl">
-                      Augment or replace internal product teams with battle-tested senior engineers, UI/UX systems designers, and DevOps leads running 14-day agile release cycles under enterprise SLAs.
+                      We deploy custom-trained, autonomous AI systems configured to handle complex logic and operate as a permanent extension of your workforce.
                     </p>
 
                     <div className="mt-8 rounded-2xl bg-[#0B0D10] border border-[#232830]/80 p-6 flex flex-col gap-4 font-mono text-xs">
@@ -1223,17 +1238,17 @@ export default function HomePage() {
                   <span className="material-symbols-outlined text-[30px]">rocket_launch</span>
                 </div>
                 <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-                  Ready to accelerate your product roadmap?
+                  Ready to automate and scale your operations?
                 </h3>
                 <p className="text-[#8B909A] text-sm leading-relaxed">
-                  Partner with a specialized engineering squad that turns complex web, mobile, and software concepts into scalable market leaders.
+                  Partner with an elite engineering team that builds scalable software and autonomous systems tailored to your unique business logic.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-md pt-3">
                   <a
                     className="w-full sm:flex-1 h-12 bg-[#6366F1] hover:bg-[#8B5CF6] text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all"
                     href="#contact"
                   >
-                    <span>Schedule Technical Discovery</span>
+                    <span>Book a Strategy Call</span>
                     <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                   </a>
                   <a
@@ -1263,7 +1278,7 @@ export default function HomePage() {
                 <span className="font-bold text-white tracking-tight">KINETIC / STUDIO</span>
               </div>
               <p className="text-xs text-[#8B909A] max-w-sm leading-relaxed">
-                The digital product studio engineering high-performance websites, custom SaaS platforms, mobile applications, and intelligent business automations.
+                The engineering studio building bespoke software and intelligent automations for global businesses.
               </p>
               <div className="flex items-center gap-4 text-xs font-mono text-[#555A64]">
                 <span>© 2026 Kinetic Studio Inc.</span>
