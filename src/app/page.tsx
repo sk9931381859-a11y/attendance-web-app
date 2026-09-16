@@ -66,7 +66,7 @@ function AutomationsPipelineVisualizer() {
   return (
     <div
       ref={containerRef}
-      className="relative w-full my-6 p-6 sm:p-8 rounded-2xl bg-[#0E1116]/90 border border-[#232830] overflow-hidden"
+      className="relative w-full my-6 p-4 sm:p-6 md:p-8 rounded-2xl bg-[#0E1116]/90 border border-[#232830] overflow-hidden"
     >
       {/* Background radial glow */}
       <div className="absolute inset-0 bg-gradient-to-r from-[#6366F1]/10 via-[#06B6D4]/10 to-[#8B5CF6]/10 pointer-events-none blur-xl"></div>
@@ -87,7 +87,7 @@ function AutomationsPipelineVisualizer() {
       {/* Pipeline Container with SVG and Floating Circles */}
       <div className="relative w-full pt-2 pb-4">
         {/* SVG Connecting Line aligned with circular icon centers */}
-        <div className="absolute left-0 right-0 top-10 sm:top-12 -translate-y-1/2 h-12 px-12 sm:px-24 pointer-events-none">
+        <div className="absolute left-0 right-0 top-10 sm:top-12 -translate-y-1/2 h-12 px-6 sm:px-16 md:px-24 pointer-events-none">
           <svg
             className="w-full h-full overflow-visible"
             viewBox="0 0 100 20"
@@ -159,22 +159,22 @@ function AutomationsPipelineVisualizer() {
         </div>
 
         {/* Floating Circles Row */}
-        <div className="relative w-full flex items-start justify-between px-6 sm:px-16">
+        <div className="relative w-full flex items-start justify-between px-1 sm:px-8 md:px-16">
           {/* 1. Stripe Floating Circle */}
           <motion.div
             animate={{ y: [-5, 5, -5] }}
             transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
             className="relative z-10 flex flex-col items-center group cursor-pointer"
           >
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#16191E] border-2 border-[#6366F1] flex flex-col items-center justify-center shadow-[0_0_24px_rgba(99,102,241,0.35)] transition-transform duration-300 group-hover:scale-110">
-              <span className="material-symbols-outlined text-[#6366F1] text-[24px] sm:text-[28px]">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full bg-[#16191E] border-2 border-[#6366F1] flex flex-col items-center justify-center shadow-[0_0_24px_rgba(99,102,241,0.35)] transition-transform duration-300 group-hover:scale-110">
+              <span className="material-symbols-outlined text-[#6366F1] text-[20px] sm:text-[24px] md:text-[28px]">
                 credit_card
               </span>
             </div>
-            <span className="mt-2.5 text-xs font-semibold text-white tracking-wide">
+            <span className="mt-2 text-xs font-semibold text-white tracking-wide">
               Stripe
             </span>
-            <span className="text-[10px] font-mono text-[#6366F1]">
+            <span className="text-[9px] sm:text-[10px] font-mono text-[#6366F1]">
               Event Source
             </span>
           </motion.div>
@@ -185,15 +185,15 @@ function AutomationsPipelineVisualizer() {
             transition={{ duration: 4.0, repeat: Infinity, ease: 'easeInOut' }}
             className="relative z-10 flex flex-col items-center group cursor-pointer"
           >
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#16191E] border-2 border-[#06B6D4] flex flex-col items-center justify-center shadow-[0_0_24px_rgba(6,182,212,0.35)] transition-transform duration-300 group-hover:scale-110">
-              <span className="material-symbols-outlined text-[#06B6D4] text-[24px] sm:text-[28px]">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full bg-[#16191E] border-2 border-[#06B6D4] flex flex-col items-center justify-center shadow-[0_0_24px_rgba(6,182,212,0.35)] transition-transform duration-300 group-hover:scale-110">
+              <span className="material-symbols-outlined text-[#06B6D4] text-[20px] sm:text-[24px] md:text-[28px]">
                 database
               </span>
             </div>
-            <span className="mt-2.5 text-xs font-semibold text-white tracking-wide">
+            <span className="mt-2 text-xs font-semibold text-white tracking-wide">
               Database
             </span>
-            <span className="text-[10px] font-mono text-[#06B6D4]">
+            <span className="text-[9px] sm:text-[10px] font-mono text-[#06B6D4]">
               PostgreSQL Sync
             </span>
           </motion.div>
@@ -204,15 +204,15 @@ function AutomationsPipelineVisualizer() {
             transition={{ duration: 3.7, repeat: Infinity, ease: 'easeInOut' }}
             className="relative z-10 flex flex-col items-center group cursor-pointer"
           >
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#16191E] border-2 border-[#8B5CF6] flex flex-col items-center justify-center shadow-[0_0_24px_rgba(139,92,246,0.4)] transition-transform duration-300 group-hover:scale-110">
-              <span className="material-symbols-outlined text-[#8B5CF6] text-[24px] sm:text-[28px]">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full bg-[#16191E] border-2 border-[#8B5CF6] flex flex-col items-center justify-center shadow-[0_0_24px_rgba(139,92,246,0.4)] transition-transform duration-300 group-hover:scale-110">
+              <span className="material-symbols-outlined text-[#8B5CF6] text-[20px] sm:text-[24px] md:text-[28px]">
                 hub
               </span>
             </div>
-            <span className="mt-2.5 text-xs font-semibold text-white tracking-wide">
+            <span className="mt-2 text-xs font-semibold text-white tracking-wide">
               ZenithFlowHQ
             </span>
-            <span className="text-[10px] font-mono text-[#8B5CF6]">
+            <span className="text-[9px] sm:text-[10px] font-mono text-[#8B5CF6]">
               Core Engine
             </span>
           </motion.div>
@@ -220,7 +220,7 @@ function AutomationsPipelineVisualizer() {
       </div>
 
       {/* Pipeline Status Indicator */}
-      <div className="mt-4 pt-3 border-t border-[#232830]/60 flex items-center justify-between text-[11px] font-mono text-[#555A64]">
+      <div className="mt-4 pt-3 border-t border-[#232830]/60 flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] font-mono text-[#555A64]">
         <span>Input: Webhook Payload</span>
         <span className="text-[#06B6D4] flex items-center gap-1">
           <span>Stripe</span>
@@ -306,10 +306,10 @@ export default function HomePage() {
   };
 
   return (
-    <div className="bg-[#0B0D10] text-[#F4F5F6] min-h-screen flex flex-col antialiased selection:bg-[#6366F1] selection:text-white font-sans">
+    <div className="bg-[#0B0D10] text-[#F4F5F6] min-h-screen flex flex-col antialiased selection:bg-[#6366F1] selection:text-white font-sans overflow-x-hidden">
       {/* Top Navigation Bar */}
       <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b border-[#232830] bg-[#0B0D10]/85 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto h-full px-6 lg:px-8 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto h-full px-5 sm:px-6 lg:px-8 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <a className="flex items-center gap-2.5 group" href="/">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#6366F1] to-[#06B6D4] flex items-center justify-center p-0.5 shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
@@ -317,9 +317,9 @@ export default function HomePage() {
                   terminal
                 </span>
               </div>
-              <span className="font-semibold text-lg tracking-tight text-white flex items-center gap-1.5">
+              <span className="font-semibold text-base sm:text-lg tracking-tight text-white flex items-center gap-1.5 shrink-0">
                 KINETIC <span className="text-[#06B6D4] font-mono text-sm">/ STUDIO</span>
-                <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-[#16191E] border border-[#6366F1]/30 text-[#06B6D4] font-medium ml-1">
+                <span className="hidden sm:inline-block font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-[#16191E] border border-[#6366F1]/30 text-[#06B6D4] font-medium ml-1">
                   {'AGENCY // PRODUCT LAB'}
                 </span>
               </span>
@@ -361,7 +361,7 @@ export default function HomePage() {
       </header>
 
       {/* Hero Overview Banner */}
-      <section className="relative pt-32 pb-16 px-6 lg:px-8 border-b border-[#232830]/60 bg-[#0B0D10] overflow-hidden">
+      <section className="relative pt-32 pb-16 px-5 sm:px-6 lg:px-8 border-b border-[#232830]/60 bg-[#0B0D10] overflow-hidden">
         <div
           className="absolute inset-0 pointer-events-none opacity-70"
           style={{
@@ -375,13 +375,13 @@ export default function HomePage() {
               <span className="material-symbols-outlined text-[14px]">rocket_launch</span>
               <span className="tracking-wider">FULL-CYCLE DIGITAL PRODUCT STUDIO</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white leading-[1.15]">
+            <h1 className="text-[22px] sm:text-4xl lg:text-5xl font-semibold tracking-tight text-white leading-[1.25] sm:leading-[1.15] break-words">
               Scale{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#06B6D4] via-[#6366F1] to-[#8B5CF6]">
                 Without The Overhead.
               </span>
             </h1>
-            <p className="mt-4 text-[#8B909A] text-base lg:text-lg leading-relaxed max-w-xl">
+            <p className="mt-4 text-[#8B909A] text-xs sm:text-base lg:text-lg leading-relaxed max-w-xl break-words">
               We build bespoke software and autonomous systems that drive international revenue, eliminate operational bottlenecks, and adapt exactly to how you do business.
             </p>
           </div>
@@ -423,7 +423,7 @@ export default function HomePage() {
       </section>
 
       {/* Main 2-Column Desktop Architecture */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-10">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-5 sm:px-6 lg:px-8 py-8 sm:py-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative">
           {/* ================= LEFT COLUMN: SIDEBAR (5 Services Navigation) ================= */}
           <aside className="lg:col-span-4 static lg:sticky lg:top-24 z-30 flex flex-col gap-5">
@@ -575,7 +575,7 @@ export default function HomePage() {
           </aside>
 
           {/* ================= RIGHT COLUMN: SCROLLING IMMERSIVE CARDS ================= */}
-          <section className="lg:col-span-8 flex flex-col gap-10" id="services">
+          <section className="lg:col-span-8 flex flex-col gap-6 sm:gap-8 lg:gap-10 w-full" id="services">
             {/* SERVICE CARD 1 */}
             <ServiceCardWrapper
               id="service-1"
@@ -583,7 +583,7 @@ export default function HomePage() {
               initialExpanded={true}
             >
               {({ isExpanded, toggle }) => (
-                <article className="bg-[#16191E]/85 border border-[#232830] rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden transition-all duration-300">
+                <article className="w-full bg-[#16191E]/85 border border-[#232830] rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl relative overflow-hidden transition-all duration-300">
                   <div className="absolute -top-16 -right-16 w-72 h-72 bg-[#06B6D4]/10 rounded-full blur-3xl pointer-events-none"></div>
 
                   <div
@@ -602,7 +602,7 @@ export default function HomePage() {
                           {isExpanded ? 'Full View' : 'Half View'}
                         </span>
                       </div>
-                      <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#06B6D4] transition-colors">
+                      <h2 className="text-lg sm:text-2xl lg:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#06B6D4] transition-colors leading-snug sm:leading-tight break-words">
                         Websites &amp; Apps
                       </h2>
                     </div>
@@ -631,10 +631,10 @@ export default function HomePage() {
                       isExpanded ? 'max-h-[3000px] opacity-100' : 'max-h-[250px] opacity-90'
                     }`}
                   >
-                    <p className="mt-6 text-base text-[#8B909A] leading-relaxed max-w-2xl">
+                    <p className="mt-4 sm:mt-6 text-xs sm:text-base text-[#8B909A] leading-relaxed max-w-2xl break-words">
                       We engineer high-performance, bespoke digital platforms designed to capture global audiences and accelerate your revenue growth.
                     </p>
-                    <div className="mt-8 rounded-2xl bg-[#111419]/80 border border-[#232830] p-6 flex flex-col gap-4">
+                    <div className="mt-8 rounded-2xl bg-[#111419]/80 border border-[#232830] p-4 sm:p-6 flex flex-col gap-4">
                       <div className="flex items-center justify-between pb-3 border-b border-[#232830]/60">
                         <div className="flex items-center gap-2.5">
                           <span className="material-symbols-outlined text-[#06B6D4] text-[18px]">
@@ -721,7 +721,7 @@ export default function HomePage() {
               initialExpanded={true}
             >
               {({ isExpanded, toggle }) => (
-                <article className="bg-[#16191E]/85 border border-[#232830] rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden transition-all duration-300">
+                <article className="w-full bg-[#16191E]/85 border border-[#232830] rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl relative overflow-hidden transition-all duration-300">
                   <div className="absolute -top-16 -right-16 w-72 h-72 bg-[#6366F1]/10 rounded-full blur-3xl pointer-events-none"></div>
 
                   <div
@@ -737,7 +737,7 @@ export default function HomePage() {
                           SOC 2 Ready
                         </span>
                       </div>
-                      <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#6366F1] transition-colors">
+                      <h2 className="text-lg sm:text-2xl lg:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#6366F1] transition-colors leading-snug sm:leading-tight break-words">
                         Custom Software
                       </h2>
                     </div>
@@ -766,10 +766,10 @@ export default function HomePage() {
                       isExpanded ? 'max-h-[3000px] opacity-100' : 'max-h-[250px] opacity-90'
                     }`}
                   >
-                    <p className="mt-6 text-base text-[#8B909A] leading-relaxed max-w-2xl">
+                    <p className="mt-4 sm:mt-6 text-xs sm:text-base text-[#8B909A] leading-relaxed max-w-2xl break-words">
                       Our developers build enterprise-grade, tailor-made systems that seamlessly adapt to your exact operational workflows without compromise.
                     </p>
-                    <div className="mt-8 rounded-2xl bg-[#111419]/80 border border-[#232830] p-6 flex flex-col gap-5">
+                    <div className="mt-8 rounded-2xl bg-[#111419]/80 border border-[#232830] p-4 sm:p-6 flex flex-col gap-5">
                       <div className="bg-[#0B0D10]/90 p-4 rounded-xl border border-[#232830]/80 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <div className="w-2.5 h-2.5 rounded-full bg-[#6366F1] animate-ping"></div>
@@ -848,7 +848,7 @@ export default function HomePage() {
               initialExpanded={true}
             >
               {({ isExpanded, toggle }) => (
-                <article className="bg-[#16191E]/85 border border-[#232830] rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden transition-all duration-300">
+                <article className="w-full bg-[#16191E]/85 border border-[#232830] rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl relative overflow-hidden transition-all duration-300">
                   <div className="absolute -top-16 -right-16 w-72 h-72 bg-[#06B6D4]/10 rounded-full blur-3xl pointer-events-none"></div>
 
                   <div
@@ -867,7 +867,7 @@ export default function HomePage() {
                           {isExpanded ? 'Full View' : 'Half View'}
                         </span>
                       </div>
-                      <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#06B6D4] transition-colors">
+                      <h2 className="text-lg sm:text-2xl lg:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#06B6D4] transition-colors leading-snug sm:leading-tight break-words">
                         Backend Automations
                       </h2>
                     </div>
@@ -895,11 +895,11 @@ export default function HomePage() {
                       isExpanded ? 'max-h-[3000px] opacity-100' : 'max-h-[250px] opacity-90'
                     }`}
                   >
-                    <p className="mt-6 text-base text-[#8B909A] leading-relaxed max-w-2xl">
+                    <p className="mt-4 sm:mt-6 text-xs sm:text-base text-[#8B909A] leading-relaxed max-w-2xl break-words">
                       We construct resilient, invisible infrastructure that completely eliminates manual data handling and ensures flawless execution across multiple time zones.
                     </p>
 
-                    <div className="mt-8 rounded-2xl bg-[#111419]/80 border border-[#232830] p-6 flex flex-col gap-5">
+                    <div className="mt-8 rounded-2xl bg-[#111419]/80 border border-[#232830] p-4 sm:p-6 flex flex-col gap-5">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div className="bg-[#16191E] border border-[#232830]/70 rounded-2xl p-4 flex flex-col gap-3">
                           <div className="flex items-center justify-between pb-2.5 border-b border-[#232830]/60 text-xs">
@@ -976,7 +976,7 @@ export default function HomePage() {
               initialExpanded={true}
             >
               {({ isExpanded, toggle }) => (
-                <article className="bg-[#16191E]/85 border border-[#232830] rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden transition-all duration-300">
+                <article className="w-full bg-[#16191E]/85 border border-[#232830] rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl relative overflow-hidden transition-all duration-300">
                   <div className="absolute -top-16 -right-16 w-72 h-72 bg-[#6366F1]/10 rounded-full blur-3xl pointer-events-none"></div>
 
                   <div
@@ -995,7 +995,7 @@ export default function HomePage() {
                           {isExpanded ? 'Full View' : 'Half View'}
                         </span>
                       </div>
-                      <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#6366F1] transition-colors">
+                      <h2 className="text-lg sm:text-2xl lg:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#6366F1] transition-colors leading-snug sm:leading-tight break-words">
                         SaaS Automations
                       </h2>
                     </div>
@@ -1023,14 +1023,14 @@ export default function HomePage() {
                       isExpanded ? 'max-h-[3000px] opacity-100' : 'max-h-[250px] opacity-90'
                     }`}
                   >
-                    <p className="mt-6 text-base text-[#8B909A] leading-relaxed max-w-2xl">
+                    <p className="mt-4 sm:mt-6 text-xs sm:text-base text-[#8B909A] leading-relaxed max-w-2xl break-words">
                       We synchronize your disparate cloud applications into a unified, intelligent ecosystem that scales effortlessly alongside your international expansion.
                     </p>
 
                     {/* Automations 3 Floating Circles & Animated SVG Line */}
                     <AutomationsPipelineVisualizer />
 
-                    <div className="mt-8 rounded-2xl bg-[#111419]/80 border border-[#232830] p-6 flex flex-col gap-4">
+                    <div className="mt-8 rounded-2xl bg-[#111419]/80 border border-[#232830] p-4 sm:p-6 flex flex-col gap-4">
                       <div className="p-4 rounded-xl bg-[#16191E] border border-[#232830]/70 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3.5">
                           <div className="w-9 h-9 rounded-xl bg-[#6366F1]/20 border border-[#6366F1]/30 flex items-center justify-center text-[#6366F1]">
@@ -1115,7 +1115,7 @@ export default function HomePage() {
               initialExpanded={true}
             >
               {({ isExpanded, toggle }) => (
-                <article className="bg-[#16191E]/85 border border-[#232830] rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden transition-all duration-300">
+                <article className="w-full bg-[#16191E]/85 border border-[#232830] rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl relative overflow-hidden transition-all duration-300">
                   <div className="absolute -top-16 -right-16 w-72 h-72 bg-[#8B5CF6]/10 rounded-full blur-3xl pointer-events-none"></div>
 
                   <div
@@ -1134,7 +1134,7 @@ export default function HomePage() {
                           {isExpanded ? 'Full View' : 'Half View'}
                         </span>
                       </div>
-                      <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#8B5CF6] transition-colors">
+                      <h2 className="text-lg sm:text-2xl lg:text-3xl font-bold tracking-tight text-white group-hover/header:text-[#8B5CF6] transition-colors leading-snug sm:leading-tight break-words">
                         AI Agents &amp; Workflows
                       </h2>
                     </div>
@@ -1165,11 +1165,11 @@ export default function HomePage() {
                       isExpanded ? 'max-h-[3000px] opacity-100' : 'max-h-[250px] opacity-90'
                     }`}
                   >
-                    <p className="mt-6 text-base text-[#8B909A] leading-relaxed max-w-2xl">
+                    <p className="mt-4 sm:mt-6 text-xs sm:text-base text-[#8B909A] leading-relaxed max-w-2xl break-words">
                       We deploy custom-trained, autonomous AI systems configured to handle complex logic and operate as a permanent extension of your workforce.
                     </p>
 
-                    <div className="mt-8 rounded-2xl bg-[#0B0D10] border border-[#232830]/80 p-6 flex flex-col gap-4 font-mono text-xs">
+                    <div className="mt-8 rounded-2xl bg-[#0B0D10] border border-[#232830]/80 p-4 sm:p-6 flex flex-col gap-4 font-mono text-xs">
                       <div className="flex items-center justify-between pb-3 border-b border-[#232830]/60">
                         <div className="flex items-center gap-2.5">
                           <div className="flex gap-1.5">
@@ -1225,7 +1225,7 @@ export default function HomePage() {
             </ServiceCardWrapper>
 
             {/* End of Services Final Conversion Banner */}
-            <div className="bg-gradient-to-tr from-[#16191E] via-[#111419] to-[#16191E] border border-[#232830] rounded-3xl p-10 sm:p-14 text-center relative overflow-hidden shadow-2xl">
+            <div className="bg-gradient-to-tr from-[#16191E] via-[#111419] to-[#16191E] border border-[#232830] rounded-2xl sm:rounded-3xl p-6 sm:p-10 lg:p-14 text-center relative overflow-hidden shadow-2xl">
               <div
                 className="absolute inset-0 pointer-events-none opacity-80"
                 style={{
@@ -1237,10 +1237,10 @@ export default function HomePage() {
                 <div className="w-14 h-14 rounded-2xl bg-[#6366F1]/15 border border-[#6366F1]/30 flex items-center justify-center text-[#6366F1] shadow-lg shadow-indigo-500/20">
                   <span className="material-symbols-outlined text-[30px]">rocket_launch</span>
                 </div>
-                <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                <h3 className="text-lg sm:text-2xl lg:text-3xl font-bold tracking-tight text-white leading-snug break-words">
                   Ready to automate and scale your operations?
                 </h3>
-                <p className="text-[#8B909A] text-sm leading-relaxed">
+                <p className="text-[#8B909A] text-xs sm:text-sm leading-relaxed break-words">
                   Partner with an elite engineering team that builds scalable software and autonomous systems tailored to your unique business logic.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-md pt-3">
@@ -1266,7 +1266,7 @@ export default function HomePage() {
 
       {/* Desktop Enterprise Footer */}
       <footer className="border-t border-[#232830] bg-[#0B0D10] mt-20 pt-12 pb-10">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col gap-10">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 flex flex-col gap-8 sm:gap-10">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 text-sm">
             <div className="col-span-2 flex flex-col gap-4">
               <div className="flex items-center gap-2">
