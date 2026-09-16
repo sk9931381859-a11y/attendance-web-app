@@ -417,8 +417,8 @@ export default function HomePage() {
       {/* Main 2-Column Desktop Architecture */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 lg:px-8 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative">
-          {/* ================= LEFT COLUMN: STICKY SIDEBAR (5 Services Navigation) ================= */}
-          <aside className="lg:col-span-4 sticky top-24 z-30 flex flex-col gap-5">
+          {/* ================= LEFT COLUMN: SIDEBAR (5 Services Navigation) ================= */}
+          <aside className="lg:col-span-4 static lg:sticky lg:top-24 z-30 flex flex-col gap-5">
             <div className="bg-[#16191E] border border-[#232830] rounded-2xl p-5 shadow-2xl backdrop-blur-md">
               <div className="flex items-center justify-between pb-4 border-b border-[#232830] mb-4">
                 <div className="flex items-center gap-2">
