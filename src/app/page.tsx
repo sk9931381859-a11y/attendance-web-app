@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { motion, useInView } from 'framer-motion';
+import { motion, useInView, Variants } from 'framer-motion';
 
 // --- Reusable Apple-Style Inline ZenithFlowHQ Neon SVG Logo ---
 function ZenithFlowLogo({ idSuffix = '' }: { idSuffix?: string }) {
@@ -31,7 +31,7 @@ function ZenithFlowLogo({ idSuffix = '' }: { idSuffix?: string }) {
       {/* Nodes (Dots) */}
       <circle cx="25" cy="25" r="4" fill="#00E5FF" />
       <circle cx="75" cy="25" r="4" fill="#00E5FF" />
-      <circle cx="25" cy="75" r="4" fill="#B200FF" />
+      <circle cx="25" cy="75" r="B200FF" />
       <circle cx="75" cy="75" r="4" fill="#B200FF" />
       <circle cx="50" cy="50" r="3" fill="#6677FF" />
       <circle cx="40" cy="25" r="2.5" fill="#00E5FF" />
@@ -44,29 +44,22 @@ function ZenithFlowLogo({ idSuffix = '' }: { idSuffix?: string }) {
 // --- Light Mode Automations Pipeline Micro-Visualizer (Stripe -> Database -> ZenithFlowHQ) ---
 function LightModePipelineVisualizer() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(containerRef, { once: false, amount: 0.35 });
+  const isInView = useInView(containerRef, { once: false, amount: 0.3 });
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full my-4 p-4 rounded-2xl bg-[#F5F5F7] border border-[#E5E5EA] overflow-hidden"
-    >
-      <div className="flex items-center justify-between mb-5 relative z-10">
+    <div ref={containerRef} className="w-full bg-[#F5F5F7] rounded-2xl p-4 border border-[#E5E5EA] overflow-hidden">
+      <div className="flex items-center justify-between text-xs mb-3 pb-2 border-b border-[#E5E5EA]">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-[#0066CC] animate-pulse"></span>
-          <span className="text-[11px] font-mono font-semibold tracking-wider text-[#1D1D1F] uppercase">
-            Autonomous Pipeline
-          </span>
+          <span className="font-semibold text-[#1D1D1F]">Pipeline Live Telemetry</span>
         </div>
-        <span className="text-[10px] font-mono text-[#86868B] px-2 py-0.5 rounded-full bg-white border border-[#E5E5EA]">
-          Live Stream
-        </span>
+        <span className="font-mono text-[#86868B] text-[11px]">99.99% Uptime</span>
       </div>
 
-      <div className="relative w-full pt-1 pb-3">
-        {/* SVG Track and Animated Connecting Line */}
-        <div className="absolute left-0 right-0 top-7 -translate-y-1/2 h-8 px-8 sm:px-12 pointer-events-none">
-          <svg className="w-full h-full overflow-visible" viewBox="0 0 100 20" preserveAspectRatio="none">
+      <div className="relative flex items-center justify-between py-2">
+        {/* Connecting Animated Gradient Line */}
+        <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-[2px]">
+          <svg className="w-full h-5 overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 20">
             <defs>
               <linearGradient id="applePipeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#0066CC" />
@@ -119,124 +112,160 @@ function LightModePipelineVisualizer() {
             <div className="w-12 h-12 rounded-full bg-white border border-[#E5E5EA] shadow-sm flex items-center justify-center text-[#8A2BE2]">
               <span className="material-symbols-outlined text-[20px]">hub</span>
             </div>
-            <span className="mt-1.5 text-[11px] font-semibold text-[#1D1D1F]">Engine</span>
-            <span className="text-[9px] font-mono text-[#86868B]">ZenithFlow</span>
+            <span className="mt-1.5 text-[11px] font-semibold text-[#1D1D1F]">Zenith</span>
+            <span className="text-[9px] font-mono text-[#86868B]">Engine</span>
           </div>
         </div>
+      </div>
+
+      <div className="mt-2 pt-2 border-t border-[#E5E5EA] flex items-center justify-between text-[11px] text-[#86868B]">
+        <span>Webhook Latency: <strong className="text-[#1D1D1F] font-mono font-medium">18ms</strong></span>
+        <span>Auto-retry: <strong className="text-[#0066CC] font-medium">Exponential</strong></span>
       </div>
     </div>
   );
 }
 
+// --- 5 Bento Service Cards Data ---
+const services = [
+  {
+    id: 'service-01',
+    num: '01',
+    title: 'Websites & Apps',
+    subtitle: 'Next.js 15, 100 Lighthouse & Motion',
+    desc: 'We engineer high-performance, bespoke digital platforms designed to capture global audiences and accelerate your revenue growth.',
+    icon: 'language',
+    badge: 'Score: 100 Benchmark',
+    metric: 'LCP < 0.6s • CLS 0.00',
+    pill: 'Headless CMS Ready',
+    hasVisualizer: false,
+  },
+  {
+    id: 'service-02',
+    num: '02',
+    title: 'Custom Software',
+    subtitle: 'Scalable Microservices & APIs',
+    desc: 'Our developers build enterprise-grade, tailor-made systems that seamlessly adapt to your exact operational workflows without compromise.',
+    icon: 'dns',
+    badge: 'SOC 2 Ready',
+    metric: '4.2M req/sec SLA',
+    pill: 'PostgreSQL Isolation',
+    hasVisualizer: false,
+  },
+  {
+    id: 'service-03',
+    num: '03',
+    title: 'Backend Automations',
+    subtitle: 'SwiftUI, Jetpack Compose & Background Sync',
+    desc: 'We construct resilient, invisible infrastructure that completely eliminates manual data handling and ensures flawless execution across multiple time zones.',
+    icon: 'devices',
+    badge: 'Native 60 FPS',
+    metric: 'Offline-First DB',
+    pill: 'Automated CI/CD',
+    hasVisualizer: false,
+  },
+  {
+    id: 'service-04',
+    num: '04',
+    title: 'SaaS Automations',
+    subtitle: 'Custom CRM, ERP & Billing Engines',
+    desc: 'We supercharge your software stack with intelligent bots, unified APIs, and automated billing that eliminate busywork along every step.',
+    icon: 'swap_horiz',
+    badge: 'Zero Human Touch',
+    metric: '99.99% Execution',
+    pill: 'Unified Webhooks',
+    hasVisualizer: true,
+  },
+  {
+    id: 'service-05',
+    num: '05',
+    title: 'AI Agents & Workflows',
+    subtitle: 'Autonomous Reasoning & Task Orchestration',
+    desc: 'Deploy custom autonomous agents designed to handle customer engagement, complex code generation, and mission-critical automated pipelines 24/7.',
+    icon: 'spark',
+    badge: 'Autonomous AI',
+    metric: 'Sub-second Inference',
+    pill: 'Zero-Leak Guardrails',
+    hasVisualizer: false,
+  },
+];
+
+// --- Hardware-Accelerated Framer Motion Variants ---
+const heroContainerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.12,
+      delayChildren: 0.05,
+    },
+  },
+};
+
+const heroItemVariants: Variants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.6,
+      ease: [0.16, 1, 0.3, 1] as const,
+    },
+  },
+};
+
+const showcaseGridVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const showcaseCardVariants: Variants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    scale: 1.0,
+    transition: {
+      duration: 0.5,
+      ease: [0.16, 1, 0.3, 1] as const,
+    },
+  },
+};
+
 export default function HomePage() {
-  const carouselRef = useRef<HTMLDivElement>(null);
   const [activeSlide, setActiveSlide] = useState(0);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
-  // Dynamically load Google Material Symbols if not yet linked
-  useEffect(() => {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href =
-      'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&family=Inter:wght@400;500;600;700;800&display=swap';
-    document.head.appendChild(link);
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, []);
-
-  // Carousel manual controls
-  const scrollCarousel = (direction: 'prev' | 'next') => {
+  const scrollCarousel = (direction: 'next' | 'prev') => {
     if (!carouselRef.current) return;
-    const scrollAmount = 420;
-    carouselRef.current.scrollBy({
-      left: direction === 'next' ? scrollAmount : -scrollAmount,
-      behavior: 'smooth',
-    });
+    const cardWidth = 420;
+    const scrollAmount = direction === 'next' ? cardWidth : -cardWidth;
+    carouselRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
   };
 
   const handleCarouselScroll = () => {
     if (!carouselRef.current) return;
-    const { scrollLeft, scrollWidth, clientWidth } = carouselRef.current;
-    const progress = scrollLeft / (scrollWidth - clientWidth);
-    const index = Math.round(progress * 4);
-    setActiveSlide(Math.min(Math.max(index, 0), 4));
+    const scrollLeft = carouselRef.current.scrollLeft;
+    const cardWidth = 420;
+    const index = Math.round(scrollLeft / cardWidth);
+    setActiveSlide(Math.min(Math.max(index, 0), services.length - 1));
   };
 
-  const services = [
-    {
-      id: 'srv-1',
-      num: '01',
-      title: 'Websites & Apps',
-      subtitle: 'Next.js 15, 100 Lighthouse & Motion',
-      desc: 'We engineer high-performance, bespoke digital platforms designed to capture global audiences and accelerate your revenue growth.',
-      badge: 'Score: 100 Benchmark',
-      icon: 'language',
-      metric: 'LCP < 0.6s • CLS 0.00',
-      pill: 'Headless CMS Ready',
-    },
-    {
-      id: 'srv-2',
-      num: '02',
-      title: 'Custom Software',
-      subtitle: 'Scalable Microservices & APIs',
-      desc: 'Our developers build enterprise-grade, tailor-made systems that seamlessly adapt to your exact operational workflows without compromise.',
-      badge: 'SOC 2 Ready',
-      icon: 'dns',
-      metric: '4.2M req/sec SLA',
-      pill: 'PostgreSQL Isolation',
-    },
-    {
-      id: 'srv-3',
-      num: '03',
-      title: 'Backend Automations',
-      subtitle: 'SwiftUI, Jetpack Compose & Background Sync',
-      desc: 'We construct resilient, invisible infrastructure that completely eliminates manual data handling and ensures flawless execution across multiple time zones.',
-      badge: 'Native 60 FPS',
-      icon: 'devices',
-      metric: 'Offline-First DB',
-      pill: 'Automated CI/CD',
-    },
-    {
-      id: 'srv-4',
-      num: '04',
-      title: 'SaaS Automations',
-      subtitle: 'Autonomous Webhook Pipelines & CRM Sync',
-      desc: 'We synchronize your disparate cloud applications into a unified, intelligent ecosystem that scales effortlessly alongside your international expansion.',
-      badge: '0.1s Webhook Trigger',
-      icon: 'schema',
-      metric: 'Stripe + Snowflake Sync',
-      pill: 'Zero Manual Operations',
-      hasVisualizer: true,
-    },
-    {
-      id: 'srv-5',
-      num: '05',
-      title: 'AI Agents & Workflows',
-      subtitle: 'Autonomous Workforce & Reasoning Pipelines',
-      desc: 'We deploy custom-trained, autonomous AI systems configured to handle complex logic and operate as a permanent extension of your workforce.',
-      badge: 'Automated Playwright E2E',
-      icon: 'spark',
-      metric: '< 1 Hour Critical SLA',
-      pill: '100% Client Owned IP',
-    },
-  ];
-
   return (
-    <div className="bg-[#F5F5F7] text-[#1D1D1F] min-h-screen flex flex-col font-sans selection:bg-[#0066CC] selection:text-white tracking-[-0.02em] overflow-x-hidden antialiased">
-      {/* 1. Global Navigation Bar (Apple Frosted Glass) */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b border-[#E5E5EA] bg-[#F5F5F7]/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto h-full px-5 sm:px-6 lg:px-8 flex items-center justify-between">
-          {/* Logo & Brand */}
+    <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] font-sans antialiased selection:bg-[#0066CC]/20 selection:text-[#0066CC]">
+      {/* 1. Minimal Header with Apple Translucency */}
+      <header className="sticky top-0 z-50 w-full border-b border-[#E5E5EA]/80 bg-[#F5F5F7]/80 backdrop-blur-md transition-all">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <a
-              className="flex items-center gap-[12px] group shrink-0 select-none"
-              style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
-              href="/"
-            >
+            <a href="/" className="flex items-center gap-3 text-[#1D1D1F] group">
               <ZenithFlowLogo idSuffix="nav" />
               <span
-                className="uppercase font-bold tracking-wide tracking-[0.05em] text-[#1D1D1F] text-base sm:text-lg shrink-0"
                 style={{ letterSpacing: '0.05em' }}
+                className="font-bold text-sm tracking-wider uppercase text-[#1D1D1F]"
               >
                 ZENITHFLOWHQ
               </span>
@@ -264,55 +293,84 @@ export default function HomePage() {
             >
               Sign In
             </Link>
-            <a
-              className="h-9 px-4 sm:px-5 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm active:scale-[0.98] transition-all shrink-0"
+            <motion.a
+              whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0, 102, 204, 0.25)' }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="h-9 px-4 sm:px-5 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm shrink-0"
               href="#cta"
             >
               <span>Book a Strategy Call</span>
               <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
-            </a>
+            </motion.a>
           </div>
         </div>
       </header>
 
-      {/* 2. Hero Section (Centered Layout, Massive Heavy Typography) */}
+      {/* 2. Hero Section: Stagger-fade upward (y: 20 to y: 0, opacity: 0 to 1) over 0.6s with [0.16, 1, 0.3, 1] */}
       <section className="relative pt-36 pb-20 px-5 sm:px-6 lg:px-8 bg-[#F5F5F7]">
-        <div className="max-w-4xl mx-auto flex flex-col items-center text-center">
+        <motion.div
+          className="max-w-4xl mx-auto flex flex-col items-center text-center"
+          variants={heroContainerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {/* Subtle Label Pill */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-[#E5E5EA] text-xs font-medium text-[#86868B] shadow-sm mb-6">
+          <motion.div
+            variants={heroItemVariants}
+            className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-[#E5E5EA] text-xs font-medium text-[#86868B] shadow-sm mb-6"
+          >
             <span className="w-2 h-2 rounded-full bg-[#0066CC]"></span>
             <span>Scale Without The Overhead</span>
-          </div>
+          </motion.div>
 
           {/* Massive Heavy H1 with Subtle Gradient Text-Clip */}
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-[-0.03em] leading-[1.1] text-transparent bg-clip-text bg-gradient-to-b from-[#1D1D1F] via-[#2A2A2C] to-[#434344]">
+          <motion.h1
+            variants={heroItemVariants}
+            className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-[-0.03em] leading-[1.1] text-transparent bg-clip-text bg-gradient-to-b from-[#1D1D1F] via-[#2A2A2C] to-[#434344]"
+          >
             Scale Without The Overhead.
-          </h1>
+          </motion.h1>
 
           {/* Subtitle */}
-          <p className="mt-5 text-[#86868B] text-base sm:text-xl font-normal leading-relaxed max-w-2xl">
+          <motion.p
+            variants={heroItemVariants}
+            className="mt-5 text-[#86868B] text-base sm:text-xl font-normal leading-relaxed max-w-2xl"
+          >
             We build bespoke software and autonomous systems that drive international revenue, eliminate operational bottlenecks, and adapt exactly to how you do business.
-          </p>
+          </motion.p>
 
-          {/* Pill-Shaped Action Buttons */}
-          <div className="mt-8 flex flex-col sm:flex-row items-center gap-3.5 w-full max-w-md justify-center">
-            <a
-              className="w-full sm:w-auto px-7 py-3.5 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
+          {/* Pill-Shaped Action Buttons with Hover State */}
+          <motion.div
+            variants={heroItemVariants}
+            className="mt-8 flex flex-col sm:flex-row items-center gap-3.5 w-full max-w-md justify-center"
+          >
+            <motion.a
               href="#cta"
+              whileHover={{ scale: 1.02, boxShadow: '0 10px 28px rgba(0, 102, 204, 0.3)' }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full sm:w-auto px-7 py-3.5 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm"
             >
               <span>Schedule a Conversation</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </a>
-            <a
-              className="w-full sm:w-auto px-7 py-3.5 rounded-full bg-white hover:bg-[#EBEBF0] text-[#1D1D1F] border border-[#E5E5EA] text-sm font-semibold flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98] transition-all"
+            </motion.a>
+            <motion.a
               href="#services"
+              whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)' }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full sm:w-auto px-7 py-3.5 rounded-full bg-white hover:bg-[#EBEBF0] text-[#1D1D1F] border border-[#E5E5EA] text-sm font-semibold flex items-center justify-center gap-1.5 shadow-sm"
             >
               <span>Explore Services</span>
-            </a>
-          </div>
+            </motion.a>
+          </motion.div>
 
           {/* 4 Bento Stat Badges */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full mt-16 max-w-4xl">
+          <motion.div
+            variants={heroItemVariants}
+            className="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full mt-16 max-w-4xl"
+          >
             <div className="bg-white rounded-[24px] p-5 sm:p-6 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] text-left">
               <div className="text-2xl sm:text-3xl font-bold text-[#1D1D1F] tracking-tight">
                 $140<span className="text-[#0066CC] text-lg font-semibold ml-0.5">M+</span>
@@ -337,115 +395,128 @@ export default function HomePage() {
               </div>
               <div className="text-xs text-[#86868B] font-medium mt-1">Typical MVP Launch</div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </section>
 
-      {/* 3. Services Carousel Section (Replaces 2-Column Layout) */}
+      {/* 3. Services Carousel Section: Scroll-triggered fade-in to the entire container */}
       <section className="py-16 bg-[#F5F5F7]" id="services">
-        <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 mb-8 flex items-end justify-between">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-[#0066CC] mb-2">
-              Capabilities &amp; Engineering
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold text-[#1D1D1F] tracking-tight">
-              Bespoke Services. Built to Scale.
-            </h2>
-          </div>
-
-          {/* Carousel Navigation Buttons */}
-          <div className="hidden sm:flex items-center gap-2">
-            <button
-              onClick={() => scrollCarousel('prev')}
-              aria-label="Previous service"
-              className="w-10 h-10 rounded-full bg-white border border-[#E5E5EA] shadow-sm flex items-center justify-center text-[#1D1D1F] hover:bg-[#EBEBF0] transition-colors active:scale-95"
-            >
-              <span className="material-symbols-outlined text-[20px]">chevron_left</span>
-            </button>
-            <button
-              onClick={() => scrollCarousel('next')}
-              aria-label="Next service"
-              className="w-10 h-10 rounded-full bg-white border border-[#E5E5EA] shadow-sm flex items-center justify-center text-[#1D1D1F] hover:bg-[#EBEBF0] transition-colors active:scale-95"
-            >
-              <span className="material-symbols-outlined text-[20px]">chevron_right</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Full-width Horizontal Scrolling Container with Scroll-Snap */}
-        <div
-          ref={carouselRef}
-          onScroll={handleCarouselScroll}
-          className="flex gap-6 overflow-x-auto px-5 sm:px-8 lg:px-12 pb-6 [scroll-snap-type:x_mandatory] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-          style={{ scrollSnapType: 'x mandatory' }}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-          {services.map((item) => (
-            <div
-              key={item.id}
-              className="min-w-[340px] sm:min-w-[400px] max-w-[420px] h-[440px] bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between shrink-0 scroll-snap-align-center transition-transform duration-300 hover:-translate-y-1"
-              style={{ scrollSnapAlign: 'center' }}
-            >
-              {/* Card Header */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-mono font-semibold text-[#0066CC] px-2.5 py-1 rounded-full bg-[#0066CC]/10">
-                    SERVICE {item.num}
-                  </span>
-                  <div className="w-10 h-10 rounded-full bg-[#F5F5F7] border border-[#E5E5EA] flex items-center justify-center text-[#1D1D1F]">
-                    {item.icon === 'spark' ? (
-                      <svg className="w-5 h-5 fill-current text-[#0066CC]" viewBox="0 0 24 24">
-                        <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
-                      </svg>
-                    ) : (
-                      <span className="material-symbols-outlined text-[22px] text-[#0066CC]">
-                        {item.icon}
-                      </span>
-                    )}
+          <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 mb-8 flex items-end justify-between">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-[#0066CC] mb-2">
+                Capabilities &amp; Engineering
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-bold text-[#1D1D1F] tracking-tight">
+                Bespoke Services. Built to Scale.
+              </h2>
+            </div>
+
+            {/* Carousel Navigation Buttons with Hover States */}
+            <div className="hidden sm:flex items-center gap-2">
+              <motion.button
+                onClick={() => scrollCarousel('prev')}
+                whileHover={{ scale: 1.02, boxShadow: '0 6px 20px rgba(0,0,0,0.08)' }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                aria-label="Previous service"
+                className="w-10 h-10 rounded-full bg-white border border-[#E5E5EA] shadow-sm flex items-center justify-center text-[#1D1D1F] hover:bg-[#EBEBF0]"
+              >
+                <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+              </motion.button>
+              <motion.button
+                onClick={() => scrollCarousel('next')}
+                whileHover={{ scale: 1.02, boxShadow: '0 6px 20px rgba(0,0,0,0.08)' }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                aria-label="Next service"
+                className="w-10 h-10 rounded-full bg-white border border-[#E5E5EA] shadow-sm flex items-center justify-center text-[#1D1D1F] hover:bg-[#EBEBF0]"
+              >
+                <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Full-width Horizontal Scrolling Container with Native Scroll-Snap (NO card animation) */}
+          <div
+            ref={carouselRef}
+            onScroll={handleCarouselScroll}
+            className="flex gap-6 overflow-x-auto px-5 sm:px-8 lg:px-12 pb-6 [scroll-snap-type:x_mandatory] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            style={{ scrollSnapType: 'x mandatory' }}
+          >
+            {services.map((item) => (
+              <div
+                key={item.id}
+                className="min-w-[340px] sm:min-w-[400px] max-w-[420px] h-[440px] bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between shrink-0 scroll-snap-align-center transition-transform duration-300 hover:-translate-y-1"
+                style={{ scrollSnapAlign: 'center' }}
+              >
+                {/* Card Header */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-mono font-semibold text-[#0066CC] px-2.5 py-1 rounded-full bg-[#0066CC]/10">
+                      SERVICE {item.num}
+                    </span>
+                    <div className="w-10 h-10 rounded-full bg-[#F5F5F7] border border-[#E5E5EA] flex items-center justify-center text-[#1D1D1F]">
+                      {item.icon === 'spark' ? (
+                        <svg className="w-5 h-5 fill-current text-[#0066CC]" viewBox="0 0 24 24">
+                          <path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" />
+                        </svg>
+                      ) : (
+                        <span className="material-symbols-outlined text-[22px] text-[#0066CC]">
+                          {item.icon}
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  <h3 className="text-xl sm:text-2xl font-bold text-[#1D1D1F] tracking-tight">
+                    {item.title}
+                  </h3>
+                  <div className="text-xs font-medium text-[#86868B] mt-1">{item.subtitle}</div>
+
+                  <p className="text-xs sm:text-sm text-[#86868B] leading-relaxed mt-4">
+                    {item.desc}
+                  </p>
                 </div>
 
-                <h3 className="text-xl sm:text-2xl font-bold text-[#1D1D1F] tracking-tight">
-                  {item.title}
-                </h3>
-                <div className="text-xs font-medium text-[#86868B] mt-1">{item.subtitle}</div>
-
-                <p className="text-xs sm:text-sm text-[#86868B] leading-relaxed mt-4">
-                  {item.desc}
-                </p>
-              </div>
-
-              {/* Card Interactive Feature or Micro-Visualizer */}
-              <div className="mt-4 pt-4 border-t border-[#F5F5F7]">
-                {item.hasVisualizer ? (
-                  <LightModePipelineVisualizer />
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs font-medium bg-[#F5F5F7] p-2.5 rounded-xl border border-[#E5E5EA]">
-                      <span className="text-[#1D1D1F] font-semibold">{item.badge}</span>
-                      <span className="text-[#0066CC] font-mono text-[11px]">{item.metric}</span>
+                {/* Card Interactive Feature or Micro-Visualizer */}
+                <div className="mt-4 pt-4 border-t border-[#F5F5F7]">
+                  {item.hasVisualizer ? (
+                    <LightModePipelineVisualizer />
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs font-medium bg-[#F5F5F7] p-2.5 rounded-xl border border-[#E5E5EA]">
+                        <span className="text-[#1D1D1F] font-semibold">{item.badge}</span>
+                        <span className="text-[#0066CC] font-mono text-[11px]">{item.metric}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-[#86868B] px-1">
+                        <span>Standard: Enterprise Grade</span>
+                        <span className="text-[#0066CC] font-medium">{item.pill}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between text-[11px] text-[#86868B] px-1">
-                      <span>Standard: Enterprise Grade</span>
-                      <span className="text-[#0066CC] font-medium">{item.pill}</span>
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        {/* Carousel Slide Indicators */}
-        <div className="flex items-center justify-center gap-1.5 mt-4">
-          {[0, 1, 2, 3, 4].map((dot) => (
-            <span
-              key={dot}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                activeSlide === dot ? 'w-6 bg-[#0066CC]' : 'w-1.5 bg-[#D2D2D7]'
-              }`}
-            />
-          ))}
-        </div>
+          {/* Carousel Slide Indicators */}
+          <div className="flex items-center justify-center gap-1.5 mt-4">
+            {[0, 1, 2, 3, 4].map((dot) => (
+              <span
+                key={dot}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  activeSlide === dot ? 'w-6 bg-[#0066CC]' : 'w-1.5 bg-[#D2D2D7]'
+                }`}
+              />
+            ))}
+          </div>
+        </motion.div>
       </section>
 
       {/* 4. Centered CTA Band (Pure White Background) */}
@@ -464,24 +535,30 @@ export default function HomePage() {
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row items-center gap-3.5 w-full max-w-md justify-center">
-            <a
-              className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
+            <motion.a
               href="mailto:contact@zenithflowhq.com"
+              whileHover={{ scale: 1.02, boxShadow: '0 12px 32px rgba(0, 102, 204, 0.35)' }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#0066CC] hover:bg-[#0077ED] text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm"
             >
               <span>Schedule a Conversation</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </a>
-            <a
-              className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#F5F5F7] hover:bg-[#EBEBF0] text-[#1D1D1F] border border-[#E5E5EA] text-sm font-semibold flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98] transition-all"
+            </motion.a>
+            <motion.a
               href="#showcase"
+              whileHover={{ scale: 1.02, boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)' }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#F5F5F7] hover:bg-[#EBEBF0] text-[#1D1D1F] border border-[#E5E5EA] text-sm font-semibold flex items-center justify-center gap-1.5 shadow-sm"
             >
               <span>View Product Showcase</span>
-            </a>
+            </motion.a>
           </div>
         </div>
       </section>
 
-      {/* 5. Product Showcase (New 2x2 Grid Section) */}
+      {/* 5. Product Showcase: Scale 0.95 to 1.0 (opacity 0 to 1) with 0.1s stagger & hover scale 1.02 */}
       <section className="py-24 px-5 sm:px-6 lg:px-8 bg-[#F5F5F7]" id="showcase">
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16">
@@ -496,10 +573,24 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* 2x2 Bento CSS Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* 2x2 Bento CSS Grid with 0.1s stagger */}
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            variants={showcaseGridVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-60px' }}
+          >
             {/* Item 1: Attendance Web App & Kiosk Wireframe */}
-            <div className="bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+            <motion.div
+              variants={showcaseCardVariants}
+              whileHover={{
+                scale: 1.02,
+                boxShadow: '0 12px 36px rgba(0, 0, 0, 0.08)',
+                transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] },
+              }}
+              className="bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between"
+            >
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs font-mono font-semibold text-[#0066CC] bg-[#0066CC]/10 px-2.5 py-1 rounded-full">
@@ -539,10 +630,18 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Item 2: Autonomous Revenue & Billing Engine */}
-            <div className="bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+            <motion.div
+              variants={showcaseCardVariants}
+              whileHover={{
+                scale: 1.02,
+                boxShadow: '0 12px 36px rgba(0, 0, 0, 0.08)',
+                transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] },
+              }}
+              className="bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between"
+            >
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs font-mono font-semibold text-[#0066CC] bg-[#0066CC]/10 px-2.5 py-1 rounded-full">
@@ -578,10 +677,18 @@ export default function HomePage() {
                   <span className="text-[#0066CC] font-medium">USD • EUR • GBP • JPY</span>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Item 3: Global Edge Telemetry */}
-            <div className="bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+            <motion.div
+              variants={showcaseCardVariants}
+              whileHover={{
+                scale: 1.02,
+                boxShadow: '0 12px 36px rgba(0, 0, 0, 0.08)',
+                transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] },
+              }}
+              className="bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between"
+            >
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs font-mono font-semibold text-[#0066CC] bg-[#0066CC]/10 px-2.5 py-1 rounded-full">
@@ -615,10 +722,18 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Item 4: Autonomous AI Reasoning Canvas */}
-            <div className="bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+            <motion.div
+              variants={showcaseCardVariants}
+              whileHover={{
+                scale: 1.02,
+                boxShadow: '0 12px 36px rgba(0, 0, 0, 0.08)',
+                transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] },
+              }}
+              className="bg-white rounded-[24px] p-8 border border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between"
+            >
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs font-mono font-semibold text-[#0066CC] bg-[#0066CC]/10 px-2.5 py-1 rounded-full">
@@ -655,34 +770,30 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
-      {/* 6. Minimalist Apple-Inspired Footer */}
-      <footer className="border-t border-[#E5E5EA] bg-[#F5F5F7] py-16">
-        <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 flex flex-col items-center text-center gap-6">
-          {/* Centered Logo with Custom Inline SVG */}
-          <div
-            className="flex items-center gap-[12px]"
-            style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
-          >
+      {/* 6. Minimalist Centered Footer */}
+      <footer className="w-full bg-[#F5F5F7] py-16 px-5 sm:px-6 lg:px-8 border-t border-[#E5E5EA]">
+        <div className="max-w-5xl mx-auto flex flex-col items-center text-center">
+          {/* Centered Logo & Branding */}
+          <div className="flex items-center justify-center gap-3 mb-6">
             <ZenithFlowLogo idSuffix="footer" />
             <span
-              className="uppercase font-bold tracking-wide tracking-[0.05em] text-[#1D1D1F] text-base sm:text-lg shrink-0"
               style={{ letterSpacing: '0.05em' }}
+              className="font-bold text-base tracking-wider uppercase text-[#1D1D1F]"
             >
               ZENITHFLOWHQ
             </span>
           </div>
 
-          <p className="text-xs text-[#86868B] max-w-md leading-relaxed">
+          <p className="text-xs sm:text-sm text-[#86868B] max-w-md mb-8 leading-relaxed">
             The modern software studio engineering bespoke platforms, autonomous workflows, and cloud architecture for international businesses.
           </p>
 
-          {/* Minimalist Navigation Links */}
-          <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-[#86868B] font-medium">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-[#86868B] mb-10">
             <a href="#services" className="hover:text-[#1D1D1F] transition-colors">
               Websites &amp; Apps
             </a>
@@ -698,13 +809,13 @@ export default function HomePage() {
             <a href="#services" className="hover:text-[#1D1D1F] transition-colors">
               AI Agents
             </a>
-            <Link href="/login" className="hover:text-[#1D1D1F] transition-colors">
+            <Link href="/kiosk" className="hover:text-[#1D1D1F] transition-colors">
               Staff Portal
             </Link>
           </div>
 
-          <div className="text-[11px] font-mono text-[#86868B] pt-4 border-t border-[#E5E5EA] w-full max-w-md">
-            <span>© 2026 ZenithFlowHQ. All rights reserved.</span>
+          <div className="text-[11px] text-[#86868B]">
+            &copy; {new Date().getFullYear()} ZenithFlowHQ. All rights reserved.
           </div>
         </div>
       </footer>
