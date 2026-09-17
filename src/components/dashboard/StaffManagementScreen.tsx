@@ -58,6 +58,7 @@ export default function StaffManagementScreen({
   initialLogs,
 }: StaffManagementScreenProps) {
   // Staff State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [staffList, setStaffList] = useState<StaffMember[]>(initialStaff);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'staff' | 'admin'>('all');
@@ -421,7 +422,7 @@ export default function StaffManagementScreen({
         </div>
 
         {/* Center: Pill Navigation Toggle */}
-        <div className="hidden md:flex items-center gap-1 bg-gray-100 p-1 rounded-full border border-gray-200">
+        <div className="hidden md:flex md:items-center gap-1 bg-gray-100 p-1 rounded-full border border-gray-200">
           <Link
             href="/dashboard"
             className="text-gray-600 hover:text-gray-900 px-4 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-2"
@@ -454,8 +455,43 @@ export default function StaffManagementScreen({
             <LogOut size={14} />
             <span>{isLoggingOut ? 'Signing Out...' : 'Sign Out'}</span>
           </button>
+
+          {/* Mobile Hamburger Menu Button */}
+          <button 
+            className="md:hidden p-2 ml-auto text-gray-600 hover:text-gray-900 focus:outline-none" 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="Toggle mobile menu"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isMobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
         </div>
       </nav>
+
+      {/* Mobile Dropdown Overlay */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden flex flex-col px-4 pt-2 pb-4 space-y-2 bg-white border-b border-gray-100 shadow-sm w-full">
+          <Link 
+            href="/dashboard" 
+            onClick={() => setIsMobileMenuOpen(false)} 
+            className="block px-4 py-3 rounded-lg font-semibold text-gray-800 bg-gray-50 hover:bg-gray-100 transition-colors"
+          >
+            Live Monitoring
+          </Link>
+          <Link 
+            href="/dashboard/manage" 
+            onClick={() => setIsMobileMenuOpen(false)} 
+            className="block px-4 py-3 rounded-lg font-semibold text-gray-800 bg-gray-50 hover:bg-gray-100 transition-colors"
+          >
+            Staff Directory
+          </Link>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 2. PAGE HEADER                                                            */}
