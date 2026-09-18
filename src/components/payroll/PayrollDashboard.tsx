@@ -281,19 +281,19 @@ export default function PayrollDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
-      {/* Header & Month Selector */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-white/10 pb-6">
+    <div className="min-h-screen bg-gray-50 text-gray-900 p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* 1. Header & Selectors */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-200 pb-5">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center justify-center text-emerald-400 shadow-inner">
+            <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 shadow-sm">
               <Banknote className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
                 Payroll Management Panel
               </h1>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-gray-500 mt-0.5">
                 Dynamic Loss-of-Pay (LOP) penalty engine & permanent payout locking
               </p>
             </div>
@@ -302,34 +302,34 @@ export default function PayrollDashboard() {
 
         {/* Month / Year Controls & Actions */}
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          {/* Month Pill Dropdown */}
+          {/* Month Dropdown */}
           <div className="relative flex-1 sm:flex-none">
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
               disabled={isLoading || isLocking}
               aria-label="Select Payroll Month"
-              className="w-full sm:w-auto rounded-full bg-white/5 border border-white/10 px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-white/25 transition backdrop-blur-md cursor-pointer"
+              className="w-full sm:w-auto px-3.5 py-2 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 shadow-sm focus:outline-none focus:border-gray-400 transition cursor-pointer"
             >
               {MONTH_NAMES.map((name, idx) => (
-                <option key={name} value={idx} className="bg-[#0B0F19] text-slate-200">
+                <option key={name} value={idx}>
                   {name}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Year Pill Dropdown */}
+          {/* Year Dropdown */}
           <div className="relative">
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
               disabled={isLoading || isLocking}
               aria-label="Select Payroll Year"
-              className="w-full sm:w-auto rounded-full bg-white/5 border border-white/10 px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-white/25 transition backdrop-blur-md cursor-pointer"
+              className="w-full sm:w-auto px-3.5 py-2 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 shadow-sm focus:outline-none focus:border-gray-400 transition cursor-pointer"
             >
               {[selectedYear - 1, selectedYear, selectedYear + 1].map((y) => (
-                <option key={y} value={y} className="bg-[#0B0F19] text-slate-200">
+                <option key={y} value={y}>
                   {y}
                 </option>
               ))}
@@ -341,19 +341,19 @@ export default function PayrollDashboard() {
             onClick={loadPayrollData}
             disabled={isLoading || isLocking}
             title="Recalculate with latest attendance"
-            className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition backdrop-blur-md disabled:opacity-50 active:scale-95"
+            className="p-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-gray-600 hover:text-gray-900 shadow-sm transition disabled:opacity-50 active:scale-95"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-emerald-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-teal-600' : ''}`} />
           </button>
 
           {/* Lock Payroll Action Button */}
           <button
             onClick={handleLockPayroll}
             disabled={isLoading || isLocking || summaryMetrics.isFullyLocked}
-            className={`inline-flex items-center justify-center gap-2 px-5 py-2 rounded-full text-xs font-semibold transition border backdrop-blur-md shadow-sm w-full sm:w-auto active:scale-95 ${
+            className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold shadow-sm transition w-full sm:w-auto active:scale-95 ${
               summaryMetrics.isFullyLocked
-                ? 'bg-white/5 text-slate-400 border-white/10 cursor-not-allowed'
-                : 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 text-emerald-300 border-emerald-500/30 hover:border-emerald-500/50 shadow-emerald-500/10'
+                ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                : 'bg-gray-900 hover:bg-black text-white'
             } disabled:opacity-50`}
           >
             <Lock className="w-3.5 h-3.5" />
@@ -371,227 +371,225 @@ export default function PayrollDashboard() {
       {/* Feedback Alert Message */}
       {feedbackMessage && (
         <div
-          className={`p-4 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-3 border backdrop-blur-md ${
+          className={`p-4 rounded-xl text-xs sm:text-sm font-medium flex items-center gap-3 border shadow-sm ${
             feedbackMessage.type === 'success'
-              ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
-              : 'bg-rose-950/30 border-rose-500/30 text-rose-300'
+              ? 'bg-green-50 border-green-200 text-green-800'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
           }`}
         >
           {feedbackMessage.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-green-600" />
           ) : (
-            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
           )}
           <span>{feedbackMessage.text}</span>
         </div>
       )}
 
-      {/* Summary Metrics Grid */}
+      {/* 2. Metric Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Base Payroll */}
-        <div className="bg-black/40 border border-white/10 backdrop-blur-md rounded-3xl p-6 flex flex-col justify-between shadow-xl">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-gray-500 text-xs font-medium">
             <span>Total Base Payroll</span>
-            <Users className="w-4 h-4 text-slate-400" />
+            <Users className="w-4 h-4 text-gray-400" />
           </div>
-          <div className="mt-4">
-            <span className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-white">
+          <div className="mt-3">
+            <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-gray-900">
               ${summaryMetrics.totalBase.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="mt-3 text-xs text-slate-400">
+          <div className="mt-2 text-[11px] text-gray-500">
             {payrollItems.length} registered faculty members
           </div>
         </div>
 
-        {/* Total Penalty Deductions (Matching Late Stat Card Aesthetic) */}
-        <div className="bg-amber-950/30 border border-amber-500/30 backdrop-blur-md rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-amber-950/20">
-          <div className="flex items-center justify-between text-amber-300 text-xs font-medium">
+        {/* Total Penalty Deductions (Soft Warning Card) */}
+        <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-5 shadow-sm text-amber-900 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-amber-800 text-xs font-medium">
             <span>Total LOP Deductions</span>
-            <TrendingDown className="w-4 h-4 text-amber-400" />
+            <TrendingDown className="w-4 h-4 text-amber-600" />
           </div>
-          <div className="mt-4">
-            <span className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-amber-400">
+          <div className="mt-3">
+            <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-amber-700">
               -${summaryMetrics.totalDeductions.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="mt-3 text-xs text-amber-300/80 flex items-center justify-between flex-wrap gap-1">
+          <div className="mt-2 text-[11px] text-amber-800/80 flex items-center justify-between flex-wrap gap-1">
             <span>{summaryMetrics.totalLop} Loss of Pay days accumulated</span>
-            <span className="font-mono text-[11px] text-amber-400/60">Formula: (Salary / 30) × LOP</span>
+            <span className="font-mono text-[10px] text-amber-700/70">Formula: (Salary / 30) × LOP</span>
           </div>
         </div>
 
         {/* Net Disbursable Payroll */}
-        <div className="bg-black/40 border border-white/10 backdrop-blur-md rounded-3xl p-6 flex flex-col justify-between shadow-xl">
-          <div className="flex items-center justify-between text-emerald-300 text-xs font-medium">
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-gray-500 text-xs font-medium">
             <span>Net Disbursable Payout</span>
-            <Wallet className="w-4 h-4 text-emerald-400" />
+            <Wallet className="w-4 h-4 text-green-600" />
           </div>
-          <div className="mt-4">
-            <span className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-emerald-400">
+          <div className="mt-3">
+            <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-green-600">
               ${summaryMetrics.totalNet.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="mt-3 text-xs text-emerald-400/80 flex items-center justify-between flex-wrap gap-1">
+          <div className="mt-2 text-[11px] text-gray-500 flex items-center justify-between flex-wrap gap-1">
             <span>
               {summaryMetrics.isFullyLocked ? 'Status: Permanently Locked' : 'Status: Dynamic Draft'}
             </span>
             {summaryMetrics.isFullyLocked && (
-              <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-500/15 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/25">
-                <FileCheck2 className="w-3.5 h-3.5 text-emerald-400" /> Archived
+              <span className="inline-flex items-center gap-1 text-[10px] bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-200 font-semibold">
+                <FileCheck2 className="w-3 h-3 text-green-600" /> Archived
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {/* Staff Roster & Dynamic Calculations */}
-      <section className="bg-white/5 border border-white/10 backdrop-blur-md rounded-3xl p-4 sm:p-6 shadow-xl space-y-4">
-        {/* Table / List Controls */}
+      {/* 3. Staff Table / Roster Section */}
+      <section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden p-5 sm:p-6 space-y-4">
+        {/* Header & Search */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="text-sm font-bold text-white tracking-tight">
+            <h2 className="text-sm font-bold text-gray-900 tracking-tight">
               Payroll Breakdown & LOP Deductions
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-gray-500">
               Cycle: {monthStart} to {monthEnd} ({daysInMonth} calendar days)
             </p>
           </div>
 
           <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search faculty name, role..."
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-black/30 border border-white/10 rounded-full text-xs sm:text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-white/25 transition backdrop-blur-md"
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs sm:text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-400 transition"
             />
           </div>
         </div>
 
         {/* Loading Indicator */}
         {isLoading ? (
-          <div className="py-16 text-center text-slate-400 flex flex-col items-center justify-center gap-3">
-            <RefreshCw className="w-6 h-6 animate-spin text-emerald-400" />
+          <div className="py-16 text-center text-gray-500 flex flex-col items-center justify-center gap-3">
+            <RefreshCw className="w-6 h-6 animate-spin text-teal-600" />
             <p className="text-xs">Evaluating attendance lateness RPC & payroll figures...</p>
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="py-16 text-center text-slate-400">
+          <div className="py-16 text-center text-gray-500">
             <p className="text-xs">No staff members found matching criteria.</p>
           </div>
         ) : (
           <>
-            {/* Mobile View: Responsive Cards Layout (block md:hidden) */}
+            {/* Mobile View: Responsive Card Layout (block md:hidden) */}
             <div className="block md:hidden space-y-3">
               {filteredItems.map((item) => (
                 <div
                   key={item.staffId}
-                  className="bg-black/40 border border-white/10 backdrop-blur-md rounded-2xl p-4 space-y-3 shadow-lg"
+                  className="bg-gray-50/50 border border-gray-200 rounded-xl p-4 space-y-3 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <div className="font-semibold text-sm text-white">{item.name}</div>
-                      <div className="text-xs text-slate-400">{item.designation}</div>
+                      <div className="font-semibold text-sm text-gray-900">{item.name}</div>
+                      <div className="text-xs text-gray-500">{item.designation}</div>
                     </div>
                     {item.isLocked ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-white/10 text-slate-300 border border-white/15">
-                        <Lock className="w-3 h-3" /> Locked
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                        <Lock className="w-3 h-3 text-gray-500" /> Locked
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                         Draft
                       </span>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-white/10 font-mono">
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-gray-200 font-mono">
                     <div>
-                      <span className="text-[11px] text-slate-400 font-sans block">Base Salary</span>
-                      <span className="text-slate-200">${item.baseSalary.toFixed(2)}</span>
+                      <span className="text-[11px] text-gray-500 font-sans block">Base Salary</span>
+                      <span className="text-gray-800">${item.baseSalary.toFixed(2)}</span>
                     </div>
                     <div>
-                      <span className="text-[11px] text-slate-400 font-sans block">LOP Days</span>
-                      <span className={item.lopDays > 0 ? 'text-amber-400 font-bold' : 'text-slate-300'}>
+                      <span className="text-[11px] text-gray-500 font-sans block">LOP Days</span>
+                      <span className={item.lopDays > 0 ? 'text-amber-700 font-bold' : 'text-gray-700'}>
                         {item.lopDays} days
                       </span>
                     </div>
                     <div>
-                      <span className="text-[11px] text-slate-400 font-sans block">Deduction (LOP)</span>
-                      <span className={item.deductionAmount > 0 ? 'text-amber-400' : 'text-slate-400'}>
+                      <span className="text-[11px] text-gray-500 font-sans block">Deduction (LOP)</span>
+                      <span className={item.deductionAmount > 0 ? 'text-amber-700 font-medium' : 'text-gray-400'}>
                         -${item.deductionAmount.toFixed(2)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[11px] text-slate-400 font-sans block">Net Payout</span>
-                      <span className="text-emerald-400 font-bold">${item.netSalary.toFixed(2)}</span>
+                      <span className="text-[11px] text-gray-500 font-sans block">Net Payout</span>
+                      <span className="text-green-700 font-bold">${item.netSalary.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Desktop View: Seamless Card Container with Standard HTML Table */}
-            <div className="hidden md:block rounded-2xl border border-white/10 overflow-hidden bg-black/40 backdrop-blur-md shadow-2xl">
-              <div className="overflow-x-auto w-full">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/10 bg-white/[0.02] text-slate-400 text-xs uppercase tracking-wider font-semibold">
-                      <th className="py-4 px-4">Faculty / Staff</th>
-                      <th className="py-4 px-4">Designation</th>
-                      <th className="py-4 px-4 text-right">Base Salary</th>
-                      <th className="py-4 px-4 text-center">LOP Days</th>
-                      <th className="py-4 px-4 text-right">Deduction (LOP)</th>
-                      <th className="py-4 px-4 text-right">Net Payable</th>
-                      <th className="py-4 px-4 text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {filteredItems.map((item) => (
-                      <tr key={item.staffId} className="hover:bg-white/[0.03] transition duration-150">
-                        <td className="py-4 px-4">
-                          <div className="font-semibold text-sm text-white">{item.name}</div>
-                          <div className="text-xs text-slate-400 font-mono mt-0.5">{item.email}</div>
-                        </td>
-                        <td className="py-4 px-4 text-xs text-slate-300">
-                          {item.designation}
-                        </td>
-                        <td className="py-4 px-4 text-right font-mono text-sm text-slate-200">
-                          ${item.baseSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full font-mono text-xs font-semibold ${
-                              item.lopDays > 0
-                                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25'
-                                : 'bg-white/5 text-slate-400 border border-white/10'
-                            }`}
-                          >
-                            {item.lopDays}
+            {/* Desktop View: Standard HTML Table */}
+            <div className="hidden md:block overflow-x-auto w-full rounded-xl border border-gray-200">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-500 text-[11px] font-semibold uppercase tracking-wider">
+                    <th className="py-3.5 px-4">Faculty / Staff</th>
+                    <th className="py-3.5 px-4">Designation</th>
+                    <th className="py-3.5 px-4 text-right">Base Salary</th>
+                    <th className="py-3.5 px-4 text-center">LOP Days</th>
+                    <th className="py-3.5 px-4 text-right">Deduction (LOP)</th>
+                    <th className="py-3.5 px-4 text-right">Net Payable</th>
+                    <th className="py-3.5 px-4 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredItems.map((item) => (
+                    <tr key={item.staffId} className="hover:bg-gray-50/60 transition duration-150">
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-sm text-gray-900">{item.name}</div>
+                        <div className="text-xs text-gray-500 font-mono mt-0.5">{item.email}</div>
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-gray-600">
+                        {item.designation}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono text-xs text-gray-800">
+                        ${item.baseSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-xs font-semibold ${
+                            item.lopDays > 0
+                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                              : 'bg-gray-100 text-gray-600 border border-gray-200'
+                          }`}
+                        >
+                          {item.lopDays}
+                        </span>
+                      </td>
+                      <td className={`py-3.5 px-4 text-right font-mono text-xs ${item.deductionAmount > 0 ? 'text-amber-700 font-semibold' : 'text-gray-400'}`}>
+                        -${item.deductionAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono text-xs font-bold text-green-700">
+                        ${item.netSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        {item.isLocked ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                            <Lock className="w-3 h-3 text-gray-500" /> Locked
                           </span>
-                        </td>
-                        <td className={`py-4 px-4 text-right font-mono text-sm ${item.deductionAmount > 0 ? 'text-amber-400 font-medium' : 'text-slate-400'}`}>
-                          -${item.deductionAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-4 px-4 text-right font-mono text-sm font-bold text-emerald-400">
-                          ${item.netSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          {item.isLocked ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-white/10 text-slate-300 border border-white/15">
-                              <Lock className="w-3 h-3" /> Locked
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-                              Draft
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Draft
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </>
         )}
