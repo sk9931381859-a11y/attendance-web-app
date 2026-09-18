@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useTransition, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useTransition, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Building2,
@@ -42,6 +42,7 @@ import {
   deleteStaffAction,
   getStaffListAction,
   getAttendanceLogsAction,
+  getShiftsAction,
 } from '@/app/dashboard/manage/actions';
 import { signOutAction } from '@/app/actions/auth';
 
@@ -64,6 +65,33 @@ export default function StaffManagementScreen({
   const [roleFilter, setRoleFilter] = useState<'all' | 'staff' | 'admin'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoggingOut, startLogout] = useTransition();
+
+  // Shift & JSONB Rules Override State
+  const [shiftList, setShiftList] = useState<{ id: string; shift_name: string; start_time: string; default_grace_minutes: number; late_threshold: number }[]>([
+    { id: 'shift-assembly', shift_name: 'Morning Assembly Shift', start_time: '07:30', default_grace_minutes: 15, late_threshold: 3 },
+    { id: 'shift-standard', shift_name: 'Standard Faculty Shift', start_time: '08:00', default_grace_minutes: 15, late_threshold: 3 },
+    { id: 'shift-late', shift_name: 'Late Shift', start_time: '08:30', default_grace_minutes: 10, late_threshold: 3 },
+  ]);
+  const [selectedShiftId, setSelectedShiftId] = useState<string>('shift-standard');
+  const [customGracePeriod, setCustomGracePeriod] = useState<string>('');
+  const [customThreshold, setCustomThreshold] = useState<string>('');
+
+  // Load configured shifts from Supabase
+  useEffect(() => {
+    getShiftsAction().then((fetched) => {
+      if (fetched && fetched.length > 0) {
+        setShiftList(fetched.map(s => ({
+          id: s.id,
+          shift_name: s.shift_name,
+          start_time: s.start_time.slice(0, 5),
+          default_grace_minutes: s.default_grace_minutes,
+          late_threshold: s.late_threshold,
+        })));
+        setSelectedShiftId(fetched[0].id);
+        setRegShift(fetched[0].start_time.slice(0, 5));
+      }
+    });
+  }, []);
 
   // Registration Form State
   const [regName, setRegName] = useState('');
@@ -216,6 +244,15 @@ export default function StaffManagementScreen({
       return;
     }
 
+    // Compile JSONB rules_override object
+    const rules_override: Record<string, number> = {};
+    if (customGracePeriod.trim() && !isNaN(Number(customGracePeriod.trim()))) {
+      rules_override.grace_minutes = Number(customGracePeriod.trim());
+    }
+    if (customThreshold.trim() && !isNaN(Number(customThreshold.trim()))) {
+      rules_override.threshold = Number(customThreshold.trim());
+    }
+
     setIsSubmitting(true);
     try {
       const res = await registerStaffAction({
@@ -224,6 +261,8 @@ export default function StaffManagementScreen({
         password: trimmedPassword,
         designation: regDesignation.trim() || null,
         shift_start_time: regShift,
+        shift_id: selectedShiftId.startsWith('shift-') ? null : selectedShiftId,
+        rules_override: Object.keys(rules_override).length > 0 ? rules_override : undefined,
         salary: regSalary ? Number(regSalary) : null,
         working_days: regWorkingDays,
       });
@@ -247,6 +286,8 @@ export default function StaffManagementScreen({
       setRegPassword('');
       setRegDesignation('');
       setRegShift('08:00');
+      setCustomGracePeriod('');
+      setCustomThreshold('');
       setRegSalary('');
       setRegWorkingDays(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
     } catch (err: unknown) {
@@ -688,13 +729,59 @@ export default function StaffManagementScreen({
                 </div>
               </div>
 
-              {/* Field 5: Shift Start Time */}
-              <div>
-                <label htmlFor="reg-staff-shift" className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Shift Timings <span className="text-red-500">*</span>
-                </label>
-                <div className="space-y-1.5">
-                  <div className="relative">
+              {/* Field 5: Shift Selection & Custom Grace Period (Responsive Layout) */}
+              <div className="flex flex-col md:flex-row gap-4 w-full">
+                {/* Dropdown for Shift selection */}
+                <div className="flex-1 w-full">
+                  <label htmlFor="reg-staff-shift-dropdown" className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Assigned Shift <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="reg-staff-shift-dropdown"
+                    value={selectedShiftId}
+                    onChange={(e) => {
+                      const sId = e.target.value;
+                      setSelectedShiftId(sId);
+                      const match = shiftList.find((s) => s.id === sId);
+                      if (match) {
+                        setRegShift(match.start_time);
+                      }
+                    }}
+                    className="w-full px-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
+                  >
+                    {shiftList.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.shift_name} ({s.start_time} - Grace: {s.default_grace_minutes}m)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Input field for Custom Grace Period */}
+                <div className="flex-1 w-full">
+                  <label htmlFor="reg-staff-custom-grace" className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Custom Grace Period (minutes)
+                  </label>
+                  <input
+                    id="reg-staff-custom-grace"
+                    type="number"
+                    min="0"
+                    max="120"
+                    value={customGracePeriod}
+                    onChange={(e) => setCustomGracePeriod(e.target.value)}
+                    placeholder="e.g. 15 (JSONB rules_override)"
+                    className="w-full px-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
+                  />
+                </div>
+              </div>
+
+              {/* Scheduled Time & Custom Threshold (Responsive Layout) */}
+              <div className="flex flex-col md:flex-row gap-4 w-full">
+                <div className="flex-1 w-full">
+                  <label htmlFor="reg-staff-shift" className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Scheduled Start Time <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative w-full">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                       <Clock size={15} />
                     </div>
@@ -708,24 +795,22 @@ export default function StaffManagementScreen({
                       className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
                     />
                   </div>
-                  {/* Presets */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-gray-400 font-medium">Presets:</span>
-                    {SHIFT_PRESETS.map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => setRegShift(preset)}
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded border transition ${
-                          regShift === preset
-                            ? 'bg-black text-white border-black'
-                            : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
-                        }`}
-                      >
-                        {preset}
-                      </button>
-                    ))}
-                  </div>
+                </div>
+
+                <div className="flex-1 w-full">
+                  <label htmlFor="reg-staff-custom-threshold" className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Custom Late Threshold (marks)
+                  </label>
+                  <input
+                    id="reg-staff-custom-threshold"
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={customThreshold}
+                    onChange={(e) => setCustomThreshold(e.target.value)}
+                    placeholder="e.g. 3 (JSONB rules_override)"
+                    className="w-full px-3 py-2 text-xs bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition"
+                  />
                 </div>
               </div>
 

@@ -9,6 +9,8 @@ export interface StaffAttendanceItem {
   attendanceId: string | null;
   checkInTime: string | null;
   status: 'present' | 'late' | 'absent' | 'pending';
+  isLate?: boolean;
+  minutesLate?: number;
 }
 
 export interface DashboardSummary {
@@ -51,13 +53,13 @@ export async function getTodayAttendanceSummaryAction(): Promise<DashboardSummar
       };
     }
 
-    // 2. Fetch today's attendance logs
+    // 2. Fetch today's attendance logs with is_late flag calculated by Postgres trigger
     const startOfDay = `${todayDate}T00:00:00.000Z`;
     const endOfDay = `${todayDate}T23:59:59.999Z`;
 
     const { data: logs, error: logsError } = await supabase
       .from('attendance_logs')
-      .select('id, teacher_id, check_in_time, status')
+      .select('id, teacher_id, check_in_time, status, is_late, minutes_late')
       .gte('check_in_time', startOfDay)
       .lte('check_in_time', endOfDay);
 
@@ -79,12 +81,21 @@ export async function getTodayAttendanceSummaryAction(): Promise<DashboardSummar
     const staffList: StaffAttendanceItem[] = (profiles || []).map((p) => {
       const log = logsMap.get(p.id);
       let status: 'present' | 'late' | 'absent' | 'pending' = 'pending';
+      const isLate = Boolean((log as any)?.is_late);
+      const minutesLate = Number((log as any)?.minutes_late || 0);
 
       if (log) {
-        status = log.status as 'present' | 'late' | 'absent';
-        if (status === 'present') presentCount++;
-        else if (status === 'late') lateCount++;
-        else if (status === 'absent') absentCount++;
+        // Late evaluation is automated by Postgres trigger (is_late = true)
+        if (isLate || log.status === 'late') {
+          status = 'late';
+          lateCount++;
+        } else if (log.status === 'absent') {
+          status = 'absent';
+          absentCount++;
+        } else if (log.status === 'present') {
+          status = 'present';
+          presentCount++;
+        }
       } else {
         pendingCount++;
       }
@@ -96,6 +107,8 @@ export async function getTodayAttendanceSummaryAction(): Promise<DashboardSummar
         attendanceId: log?.id || null,
         checkInTime: log?.check_in_time || null,
         status,
+        isLate,
+        minutesLate,
       };
     });
 

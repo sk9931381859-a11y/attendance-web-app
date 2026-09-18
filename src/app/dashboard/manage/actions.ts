@@ -4,6 +4,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import type { RulesOverride, Shift } from '@/types/supabase';
 
 export interface StaffMember {
   id: string;
@@ -12,6 +13,8 @@ export interface StaffMember {
   role: 'staff' | 'admin';
   designation?: string | null;
   shift_start_time: string;
+  shift_id?: string | null;
+  rules_override?: RulesOverride | null;
   salary?: number | null;
   working_days?: string[] | null;
   company_id?: string | null;
@@ -23,6 +26,8 @@ export interface AttendanceLogRecord {
   teacher_id: string;
   check_in_time: string;
   status: 'present' | 'late' | 'absent';
+  is_late?: boolean;
+  minutes_late?: number;
   created_at: string;
   company_id?: string | null;
   profiles?: {
@@ -45,6 +50,8 @@ export interface RegisterStaffInput {
   password: string;
   designation?: string | null;
   shift_start_time: string;
+  shift_id?: string | null;
+  rules_override?: RulesOverride | null;
   salary?: number | string | null;
   working_days?: string[] | null;
 }
@@ -288,13 +295,15 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
     // 3c. Use the same supabaseAdmin client to insert the new user data
     // (Name, Designation, Shift, Salary, Working Days, and the Principal's company_id)
     // into public.profiles (bypasses RLS safely for this admin action).
-    const profilePayload = {
+    const profilePayload: Record<string, unknown> = {
       id: newUserId,
       name,
       email,
       role: 'staff',
       designation,
       shift_start_time,
+      shift_id: data.shift_id || null,
+      rules_override: data.rules_override || {},
       salary,
       working_days,
       company_id: companyId,
@@ -324,6 +333,8 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
         role: (insertedProfile.role as 'staff' | 'admin') || 'staff',
         designation: insertedProfile.designation,
         shift_start_time: insertedProfile.shift_start_time,
+        shift_id: insertedProfile.shift_id,
+        rules_override: insertedProfile.rules_override,
         salary: insertedProfile.salary != null ? Number(insertedProfile.salary) : null,
         working_days: insertedProfile.working_days,
         company_id: insertedProfile.company_id,
@@ -349,7 +360,7 @@ export async function getStaffListAction(): Promise<StaffMember[]> {
 
     const { data, error } = await adminClient
       .from('profiles')
-      .select('id, name, email, role, designation, shift_start_time, salary, working_days, company_id, created_at')
+      .select('id, name, email, role, designation, shift_start_time, shift_id, rules_override, salary, working_days, company_id, created_at')
       .eq('company_id', companyId)
       .order('name', { ascending: true });
 
@@ -365,6 +376,8 @@ export async function getStaffListAction(): Promise<StaffMember[]> {
       role: (item.role as 'staff' | 'admin') || 'staff',
       designation: item.designation,
       shift_start_time: item.shift_start_time || '08:00:00',
+      shift_id: item.shift_id || null,
+      rules_override: item.rules_override || null,
       salary: item.salary != null ? Number(item.salary) : null,
       working_days: Array.isArray(item.working_days) ? item.working_days : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
       company_id: item.company_id,
@@ -372,6 +385,31 @@ export async function getStaffListAction(): Promise<StaffMember[]> {
     }));
   } catch (err) {
     console.error('Error in getStaffListAction:', err);
+    return [];
+  }
+}
+
+/**
+ * Server Action: Fetches configured institutional shifts.
+ */
+export async function getShiftsAction(): Promise<Shift[]> {
+  try {
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient
+      .from('shifts')
+      .select('id, shift_name, start_time, default_grace_minutes, late_threshold, penalty_fraction, created_at')
+      .order('start_time', { ascending: true });
+
+    if (error || !data || data.length === 0) {
+      return [
+        { id: 'default-assembly', shift_name: 'Morning Assembly Shift', start_time: '07:30:00', default_grace_minutes: 15, late_threshold: 3, penalty_fraction: 0.5 },
+        { id: 'default-standard', shift_name: 'Standard Faculty Shift', start_time: '08:00:00', default_grace_minutes: 15, late_threshold: 3, penalty_fraction: 0.5 },
+        { id: 'default-late', shift_name: 'Late Shift', start_time: '08:30:00', default_grace_minutes: 10, late_threshold: 3, penalty_fraction: 0.5 },
+      ];
+    }
+    return data as Shift[];
+  } catch (err) {
+    console.error('Error in getShiftsAction:', err);
     return [];
   }
 }
@@ -392,7 +430,7 @@ export async function getAttendanceLogsAction(filters?: {
 
     let query = adminClient
       .from('attendance_logs')
-      .select('id, teacher_id, check_in_time, status, created_at, company_id, profiles:teacher_id(name, designation, role)')
+      .select('id, teacher_id, check_in_time, status, is_late, minutes_late, created_at, company_id, profiles:teacher_id(name, designation, role)')
       .eq('company_id', companyId)
       .order('check_in_time', { ascending: false });
 
@@ -425,6 +463,8 @@ export async function getAttendanceLogsAction(filters?: {
       teacher_id: item.teacher_id,
       check_in_time: item.check_in_time,
       status: item.status as 'present' | 'late' | 'absent',
+      is_late: item.is_late ?? false,
+      minutes_late: item.minutes_late ?? 0,
       created_at: item.created_at,
       company_id: item.company_id,
       profiles: item.profiles ? {

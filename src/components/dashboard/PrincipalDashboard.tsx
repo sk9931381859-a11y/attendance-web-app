@@ -33,6 +33,24 @@ export default function PrincipalDashboard({ initialData }: PrincipalDashboardPr
     setIsRefreshing(true);
     try {
       const summary = await getTodayAttendanceSummaryAction();
+
+      // Query is_late = true for today() directly from Supabase attendance_logs
+      const supabase = createClient();
+      const todayDate = new Date().toISOString().split('T')[0];
+      const startOfDay = `${todayDate}T00:00:00.000Z`;
+      const endOfDay = `${todayDate}T23:59:59.999Z`;
+
+      const { count, error } = await supabase
+        .from('attendance_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_late', true)
+        .gte('check_in_time', startOfDay)
+        .lte('check_in_time', endOfDay);
+
+      if (!error && count !== null) {
+        summary.lateCount = count;
+      }
+
       setData(summary);
       setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch (err) {
@@ -161,18 +179,18 @@ export default function PrincipalDashboard({ initialData }: PrincipalDashboardPr
           </div>
         </div>
 
-        {/* Late */}
+        {/* Late - Queries is_late = true for today without hardcoded time math */}
         <div className="bg-amber-950/30 border border-amber-500/30 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-lg shadow-amber-950/20">
           <div className="flex items-center justify-between text-amber-300 text-xs font-medium">
-            <span>Late Check-Ins</span>
+            <span>Late Check-Ins (is_late)</span>
             <Clock className="w-4 h-4 text-amber-400" />
           </div>
           <div className="mt-3">
             <span className="text-2xl sm:text-3xl font-bold font-mono text-amber-400">{data.lateCount}</span>
             <span className="text-xs text-amber-300/80 ml-1.5">Staff</span>
           </div>
-          <div className="mt-2 text-[11px] text-amber-400/80">
-            Past scheduled start time
+          <div className="mt-2 text-[11px] text-amber-400/80 flex items-center justify-between">
+            <span>Query: is_late = true for today()</span>
           </div>
         </div>
 

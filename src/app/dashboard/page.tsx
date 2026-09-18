@@ -108,7 +108,7 @@ export default function DashboardPage() {
 
       const { data: logs, error: lError } = await supabase
         .from('attendance_logs')
-        .select('id, teacher_id, check_in_time, status, created_at, company_id')
+        .select('id, teacher_id, check_in_time, status, is_late, minutes_late, created_at, company_id')
         .eq('company_id', activeCompanyId)
         .gte('created_at', startOfToday)
         .lte('created_at', endOfToday)
@@ -149,32 +149,16 @@ export default function DashboardPage() {
             }
           }
 
+          // Lateness is evaluated by Postgres BEFORE INSERT trigger (is_late = true)
           if (log.status === 'absent') {
             status = 'Absent';
             calculatedAbsent++;
-          } else if (log.status === 'present') {
-            // Compare check-in time to scheduled shift_start_time
-            const shiftStr = teacher.shift_start_time || '08:00:00';
-            const [shH, shM, shS] = shiftStr.split(':').map(Number);
-            const shiftSeconds = (shH || 8) * 3600 + (shM || 0) * 60 + (shS || 0);
-
-            const checkInDate = new Date(log.check_in_time);
-            // Calculate seconds of the day for check-in
-            const checkInSeconds =
-              checkInDate.getUTCHours() * 3600 +
-              checkInDate.getUTCMinutes() * 60 +
-              checkInDate.getUTCSeconds();
-
-            if (checkInSeconds > shiftSeconds) {
-              status = 'Late';
-              calculatedLate++;
-            } else {
-              status = 'Present';
-              calculatedPresent++;
-            }
-          } else if (log.status === 'late') {
+          } else if ((log as any).is_late === true || log.status === 'late') {
             status = 'Late';
             calculatedLate++;
+          } else {
+            status = 'Present';
+            calculatedPresent++;
           }
         }
 
