@@ -6,16 +6,12 @@ import {
   Banknote,
   Lock,
   CheckCircle2,
-  Calendar,
   AlertCircle,
   TrendingDown,
   Users,
-  DollarSign,
   RefreshCw,
   FileCheck2,
-  ChevronRight,
-  ShieldCheck,
-  Building2,
+  Search,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
@@ -285,12 +281,12 @@ export default function PayrollDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="min-h-screen bg-[#0B0F19] text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Header & Month Selector */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-white/10 pb-6">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center justify-center text-emerald-400 shadow-inner">
               <Banknote className="w-5 h-5" />
             </div>
             <div>
@@ -306,34 +302,34 @@ export default function PayrollDashboard() {
 
         {/* Month / Year Controls & Actions */}
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          {/* Month Dropdown */}
+          {/* Month Pill Dropdown */}
           <div className="relative flex-1 sm:flex-none">
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
               disabled={isLoading || isLocking}
               aria-label="Select Payroll Month"
-              className="w-full sm:w-auto px-3.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs font-semibold text-slate-200 focus:outline-none focus:border-emerald-500 transition"
+              className="w-full sm:w-auto rounded-full bg-white/5 border border-white/10 px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-white/25 transition backdrop-blur-md cursor-pointer"
             >
               {MONTH_NAMES.map((name, idx) => (
-                <option key={name} value={idx}>
+                <option key={name} value={idx} className="bg-[#0B0F19] text-slate-200">
                   {name}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Year Dropdown */}
+          {/* Year Pill Dropdown */}
           <div className="relative">
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
               disabled={isLoading || isLocking}
               aria-label="Select Payroll Year"
-              className="w-full sm:w-auto px-3.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs font-semibold text-slate-200 focus:outline-none focus:border-emerald-500 transition"
+              className="w-full sm:w-auto rounded-full bg-white/5 border border-white/10 px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-white/25 transition backdrop-blur-md cursor-pointer"
             >
               {[selectedYear - 1, selectedYear, selectedYear + 1].map((y) => (
-                <option key={y} value={y}>
+                <option key={y} value={y} className="bg-[#0B0F19] text-slate-200">
                   {y}
                 </option>
               ))}
@@ -345,19 +341,19 @@ export default function PayrollDashboard() {
             onClick={loadPayrollData}
             disabled={isLoading || isLocking}
             title="Recalculate with latest attendance"
-            className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-300 hover:text-white transition disabled:opacity-50"
+            className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white transition backdrop-blur-md disabled:opacity-50 active:scale-95"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-emerald-400' : ''}`} />
           </button>
 
           {/* Lock Payroll Action Button */}
           <button
             onClick={handleLockPayroll}
             disabled={isLoading || isLocking || summaryMetrics.isFullyLocked}
-            className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition shadow-lg w-full sm:w-auto ${
+            className={`inline-flex items-center justify-center gap-2 px-5 py-2 rounded-full text-xs font-semibold transition border backdrop-blur-md shadow-sm w-full sm:w-auto active:scale-95 ${
               summaryMetrics.isFullyLocked
-                ? 'bg-slate-800 text-slate-400 border border-slate-700 cursor-not-allowed'
-                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20 active:scale-95'
+                ? 'bg-white/5 text-slate-400 border-white/10 cursor-not-allowed'
+                : 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 text-emerald-300 border-emerald-500/30 hover:border-emerald-500/50 shadow-emerald-500/10'
             } disabled:opacity-50`}
           >
             <Lock className="w-3.5 h-3.5" />
@@ -375,10 +371,10 @@ export default function PayrollDashboard() {
       {/* Feedback Alert Message */}
       {feedbackMessage && (
         <div
-          className={`p-4 rounded-2xl text-xs font-medium flex items-center gap-2.5 border ${
+          className={`p-4 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-3 border backdrop-blur-md ${
             feedbackMessage.type === 'success'
-              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
-              : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+              ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
+              : 'bg-rose-950/30 border-rose-500/30 text-rose-300'
           }`}
         >
           {feedbackMessage.type === 'success' ? (
@@ -393,56 +389,56 @@ export default function PayrollDashboard() {
       {/* Summary Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Base Payroll */}
-        <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-lg">
+        <div className="bg-black/40 border border-white/10 backdrop-blur-md rounded-3xl p-6 flex flex-col justify-between shadow-xl">
           <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
             <span>Total Base Payroll</span>
             <Users className="w-4 h-4 text-slate-400" />
           </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-bold font-mono text-white">
+          <div className="mt-4">
+            <span className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-white">
               ${summaryMetrics.totalBase.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="mt-2 text-[11px] text-slate-400">
+          <div className="mt-3 text-xs text-slate-400">
             {payrollItems.length} registered faculty members
           </div>
         </div>
 
-        {/* Total Penalty Deductions */}
-        <div className="bg-rose-950/20 border border-rose-500/30 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-lg shadow-rose-950/10">
-          <div className="flex items-center justify-between text-rose-300 text-xs font-medium">
+        {/* Total Penalty Deductions (Matching Late Stat Card Aesthetic) */}
+        <div className="bg-amber-950/30 border border-amber-500/30 backdrop-blur-md rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-amber-950/20">
+          <div className="flex items-center justify-between text-amber-300 text-xs font-medium">
             <span>Total LOP Deductions</span>
-            <TrendingDown className="w-4 h-4 text-rose-400" />
+            <TrendingDown className="w-4 h-4 text-amber-400" />
           </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-bold font-mono text-rose-400">
+          <div className="mt-4">
+            <span className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-amber-400">
               -${summaryMetrics.totalDeductions.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="mt-2 text-[11px] text-rose-300/80 flex items-center justify-between">
+          <div className="mt-3 text-xs text-amber-300/80 flex items-center justify-between flex-wrap gap-1">
             <span>{summaryMetrics.totalLop} Loss of Pay days accumulated</span>
-            <span className="font-mono text-[10px] text-rose-400/60">Formula: (Salary / 30) × LOP</span>
+            <span className="font-mono text-[11px] text-amber-400/60">Formula: (Salary / 30) × LOP</span>
           </div>
         </div>
 
         {/* Net Disbursable Payroll */}
-        <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-lg shadow-emerald-950/10">
+        <div className="bg-black/40 border border-white/10 backdrop-blur-md rounded-3xl p-6 flex flex-col justify-between shadow-xl">
           <div className="flex items-center justify-between text-emerald-300 text-xs font-medium">
             <span>Net Disbursable Payout</span>
             <Wallet className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-bold font-mono text-emerald-400">
+          <div className="mt-4">
+            <span className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-emerald-400">
               ${summaryMetrics.totalNet.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="mt-2 text-[11px] text-emerald-400/80 flex items-center justify-between">
+          <div className="mt-3 text-xs text-emerald-400/80 flex items-center justify-between flex-wrap gap-1">
             <span>
               {summaryMetrics.isFullyLocked ? 'Status: Permanently Locked' : 'Status: Dynamic Draft'}
             </span>
             {summaryMetrics.isFullyLocked && (
-              <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                <FileCheck2 className="w-3 h-3 text-emerald-400" /> Archived
+              <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-500/15 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/25">
+                <FileCheck2 className="w-3.5 h-3.5 text-emerald-400" /> Archived
               </span>
             )}
           </div>
@@ -450,7 +446,7 @@ export default function PayrollDashboard() {
       </div>
 
       {/* Staff Roster & Dynamic Calculations */}
-      <section className="bg-slate-900/70 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4">
+      <section className="bg-white/5 border border-white/10 backdrop-blur-md rounded-3xl p-4 sm:p-6 shadow-xl space-y-4">
         {/* Table / List Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
@@ -462,13 +458,14 @@ export default function PayrollDashboard() {
             </p>
           </div>
 
-          <div className="w-full sm:w-64">
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search faculty name, role..."
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              className="w-full px-3.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+              className="w-full pl-9 pr-4 py-2 bg-black/30 border border-white/10 rounded-full text-xs sm:text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-white/25 transition backdrop-blur-md"
             />
           </div>
         </div>
@@ -490,41 +487,43 @@ export default function PayrollDashboard() {
               {filteredItems.map((item) => (
                 <div
                   key={item.staffId}
-                  className="bg-slate-950 border border-slate-800/80 rounded-2xl p-4 space-y-3 shadow-md"
+                  className="bg-black/40 border border-white/10 backdrop-blur-md rounded-2xl p-4 space-y-3 shadow-lg"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="font-semibold text-sm text-white">{item.name}</div>
-                      <div className="text-[11px] text-slate-400">{item.designation}</div>
+                      <div className="text-xs text-slate-400">{item.designation}</div>
                     </div>
                     {item.isLocked ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                        <Lock className="w-2.5 h-2.5" /> Locked
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-white/10 text-slate-300 border border-white/15">
+                        <Lock className="w-3 h-3" /> Locked
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
                         Draft
                       </span>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-800/60 font-mono">
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-white/10 font-mono">
                     <div>
-                      <span className="text-[10px] text-slate-400 font-sans block">Base Salary</span>
+                      <span className="text-[11px] text-slate-400 font-sans block">Base Salary</span>
                       <span className="text-slate-200">${item.baseSalary.toFixed(2)}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 font-sans block">LOP Days</span>
-                      <span className={item.lopDays > 0 ? 'text-rose-400 font-bold' : 'text-slate-300'}>
+                      <span className="text-[11px] text-slate-400 font-sans block">LOP Days</span>
+                      <span className={item.lopDays > 0 ? 'text-amber-400 font-bold' : 'text-slate-300'}>
                         {item.lopDays} days
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 font-sans block">Deduction (LOP)</span>
-                      <span className="text-rose-400">-${item.deductionAmount.toFixed(2)}</span>
+                      <span className="text-[11px] text-slate-400 font-sans block">Deduction (LOP)</span>
+                      <span className={item.deductionAmount > 0 ? 'text-amber-400' : 'text-slate-400'}>
+                        -${item.deductionAmount.toFixed(2)}
+                      </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 font-sans block">Net Payout</span>
+                      <span className="text-[11px] text-slate-400 font-sans block">Net Payout</span>
                       <span className="text-emerald-400 font-bold">${item.netSalary.toFixed(2)}</span>
                     </div>
                   </div>
@@ -532,65 +531,67 @@ export default function PayrollDashboard() {
               ))}
             </div>
 
-            {/* Desktop View: Standard HTML Table (hidden md:table with overflow protection) */}
-            <div className="hidden md:block overflow-x-auto w-full">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 text-[11px] uppercase tracking-wider font-semibold">
-                    <th className="py-3 px-3">Faculty / Staff</th>
-                    <th className="py-3 px-3">Designation</th>
-                    <th className="py-3 px-3 text-right">Base Salary</th>
-                    <th className="py-3 px-3 text-center">LOP Days</th>
-                    <th className="py-3 px-3 text-right">Deduction (LOP)</th>
-                    <th className="py-3 px-3 text-right">Net Payable</th>
-                    <th className="py-3 px-3 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 text-xs">
-                  {filteredItems.map((item) => (
-                    <tr key={item.staffId} className="hover:bg-slate-850/40 transition">
-                      <td className="py-3 px-3">
-                        <div className="font-semibold text-white">{item.name}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{item.email}</div>
-                      </td>
-                      <td className="py-3 px-3 text-slate-300">
-                        {item.designation}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono text-slate-200">
-                        ${item.baseSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full font-mono text-xs font-semibold ${
-                            item.lopDays > 0
-                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                              : 'bg-slate-800 text-slate-400'
-                          }`}
-                        >
-                          {item.lopDays}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono text-rose-400">
-                        -${item.deductionAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono font-bold text-emerald-400">
-                        ${item.netSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        {item.isLocked ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                            <Lock className="w-2.5 h-2.5" /> Locked
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            Draft
-                          </span>
-                        )}
-                      </td>
+            {/* Desktop View: Seamless Card Container with Standard HTML Table */}
+            <div className="hidden md:block rounded-2xl border border-white/10 overflow-hidden bg-black/40 backdrop-blur-md shadow-2xl">
+              <div className="overflow-x-auto w-full">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-white/[0.02] text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                      <th className="py-4 px-4">Faculty / Staff</th>
+                      <th className="py-4 px-4">Designation</th>
+                      <th className="py-4 px-4 text-right">Base Salary</th>
+                      <th className="py-4 px-4 text-center">LOP Days</th>
+                      <th className="py-4 px-4 text-right">Deduction (LOP)</th>
+                      <th className="py-4 px-4 text-right">Net Payable</th>
+                      <th className="py-4 px-4 text-center">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {filteredItems.map((item) => (
+                      <tr key={item.staffId} className="hover:bg-white/[0.03] transition duration-150">
+                        <td className="py-4 px-4">
+                          <div className="font-semibold text-sm text-white">{item.name}</div>
+                          <div className="text-xs text-slate-400 font-mono mt-0.5">{item.email}</div>
+                        </td>
+                        <td className="py-4 px-4 text-xs text-slate-300">
+                          {item.designation}
+                        </td>
+                        <td className="py-4 px-4 text-right font-mono text-sm text-slate-200">
+                          ${item.baseSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <span
+                            className={`inline-flex items-center px-3 py-1 rounded-full font-mono text-xs font-semibold ${
+                              item.lopDays > 0
+                                ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25'
+                                : 'bg-white/5 text-slate-400 border border-white/10'
+                            }`}
+                          >
+                            {item.lopDays}
+                          </span>
+                        </td>
+                        <td className={`py-4 px-4 text-right font-mono text-sm ${item.deductionAmount > 0 ? 'text-amber-400 font-medium' : 'text-slate-400'}`}>
+                          -${item.deductionAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-4 px-4 text-right font-mono text-sm font-bold text-emerald-400">
+                          ${item.netSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          {item.isLocked ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-white/10 text-slate-300 border border-white/15">
+                              <Lock className="w-3 h-3" /> Locked
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                              Draft
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </>
         )}
