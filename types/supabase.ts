@@ -1,6 +1,6 @@
 /**
  * Supabase Database & Entity Type Definitions
- * Includes Shifts, JSONB Rules Override, Attendance Lateness Engine, and Payroll Runs
+ * Includes Shifts, JSONB Rules Override, Attendance Lateness Engine, Payroll Runs, and Faculty Hub
  */
 
 export interface RulesOverride {
@@ -82,6 +82,118 @@ export interface PayrollRun {
   } | null;
 }
 
+// =============================================================================
+// Faculty Hub Subsystem Types
+// =============================================================================
+
+export interface AcademicClass {
+  id: string;
+  grade: string;
+  section: string;
+  created_at?: string;
+}
+
+export interface AcademicSubject {
+  id: string;
+  name: string;
+  created_at?: string;
+}
+
+export interface TeacherAllocation {
+  id: string;
+  staff_id: string;
+  class_id: string;
+  subject_id: string;
+  is_class_teacher: boolean;
+  created_at?: string;
+  profiles?: Profile | null;
+  academic_classes?: AcademicClass | null;
+  academic_subjects?: AcademicSubject | null;
+}
+
+export interface Chapter {
+  id: string;
+  subject_id: string;
+  class_id: string;
+  chapter_number: number;
+  title: string;
+  created_at?: string;
+  academic_subjects?: AcademicSubject | null;
+  academic_classes?: AcademicClass | null;
+}
+
+export interface ChapterProgress {
+  id: string;
+  chapter_id: string;
+  staff_id: string;
+  theory_completed: boolean;
+  qa_completed: boolean;
+  notebooks_checked: boolean;
+  is_locked: boolean;
+  target_completion_date?: string | null;
+  locked_at?: string | null;
+  created_at?: string;
+  chapters?: Chapter | null;
+  profiles?: Profile | null;
+}
+
+export interface LeaveRequest {
+  id: string;
+  staff_id: string;
+  start_date: string;
+  end_date: string;
+  leave_type: string;
+  reason?: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  applied_at: string;
+  created_at?: string;
+  profiles?: Profile | null;
+}
+
+export interface SchoolNotice {
+  id: string;
+  title: string;
+  content: string;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  created_by?: string | null;
+  created_at?: string;
+  profiles?: Profile | null;
+}
+
+export interface TimetableEntry {
+  id: string;
+  staff_id: string;
+  day_of_week: number;
+  period_number: number;
+  class_id: string;
+  subject_id: string;
+  created_at?: string;
+  profiles?: Profile | null;
+  academic_classes?: AcademicClass | null;
+  academic_subjects?: AcademicSubject | null;
+}
+
+// Alias for TimetableEntry
+export type Timetable = TimetableEntry;
+
+export interface OverdueChapter {
+  chapter_id: string;
+  chapter_number: number;
+  chapter_title: string;
+  grade: string;
+  section: string;
+  subject_name: string;
+  target_completion_date: string;
+  days_delayed: number;
+  theory_completed: boolean;
+  qa_completed: boolean;
+  notebooks_checked: boolean;
+  is_locked: boolean;
+}
+
+// Alias for OverdueChapter / PacingDeviation
+export type PacingDeviation = OverdueChapter;
+
 export interface DatabaseRPC {
   get_monthly_penalties: {
     Args: {
@@ -90,5 +202,11 @@ export interface DatabaseRPC {
       p_month_end: string;
     };
     Returns: number;
+  };
+  get_pacing_deviations: {
+    Args: {
+      p_staff_id: string;
+    };
+    Returns: OverdueChapter[];
   };
 }
