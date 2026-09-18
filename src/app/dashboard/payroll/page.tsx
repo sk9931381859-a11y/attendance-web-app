@@ -34,7 +34,7 @@ export default async function PayrollPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-[#0B0F19] flex flex-col">
       <DashboardNav
         adminName={profile.name}
         adminEmail={profile.email}
