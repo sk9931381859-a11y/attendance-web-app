@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Building2,
   ExternalLink,
+  Wallet,
 } from 'lucide-react';
 import { signOutAction } from '@/app/actions/auth';
 
@@ -35,6 +36,12 @@ export default function DashboardNav({ adminName, adminEmail }: DashboardNavProp
       href: '/dashboard/manage',
       icon: Users,
       isActive: pathname === '/dashboard/manage',
+    },
+    {
+      label: 'Payroll',
+      href: '/dashboard/payroll',
+      icon: Wallet,
+      isActive: pathname === '/dashboard/payroll',
     },
   ];
 

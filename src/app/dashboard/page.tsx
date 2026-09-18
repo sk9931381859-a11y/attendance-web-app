@@ -332,6 +332,12 @@ export default function DashboardPage() {
           >
             Staff Directory
           </Link>
+          <Link
+            href="/dashboard/payroll"
+            className="text-gray-600 hover:text-gray-900 px-4 py-1.5 rounded-full text-xs font-semibold transition"
+          >
+            Payroll
+          </Link>
         </div>
 
         {/* Right: User Info + Black Sign Out Button */}
@@ -387,6 +393,13 @@ export default function DashboardPage() {
             className="block px-4 py-3 rounded-lg font-semibold text-gray-800 bg-gray-50 hover:bg-gray-100 transition-colors"
           >
             Staff Directory
+          </Link>
+          <Link 
+            href="/dashboard/payroll" 
+            onClick={() => setIsMobileMenuOpen(false)} 
+            className="block px-4 py-3 rounded-lg font-semibold text-gray-800 bg-gray-50 hover:bg-gray-100 transition-colors"
+          >
+            Payroll
           </Link>
         </div>
       )}

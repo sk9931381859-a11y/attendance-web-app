@@ -1,6 +1,6 @@
 /**
  * Supabase Database & Entity Type Definitions
- * Includes Shifts, JSONB Rules Override, and Attendance Lateness Engine
+ * Includes Shifts, JSONB Rules Override, Attendance Lateness Engine, and Payroll Runs
  */
 
 export interface RulesOverride {
@@ -62,4 +62,33 @@ export interface Attendance {
   latitude?: number;
   longitude?: number;
   date?: string;
+}
+
+export interface PayrollRun {
+  id: string;
+  staff_id: string;
+  month_start: string;
+  month_end: string;
+  base_salary: number;
+  lop_days: number;
+  deduction_amount: number;
+  net_salary: number;
+  status: 'draft' | 'locked' | 'paid' | string;
+  created_at?: string;
+  profiles?: {
+    name: string;
+    email?: string | null;
+    designation?: string | null;
+  } | null;
+}
+
+export interface DatabaseRPC {
+  get_monthly_penalties: {
+    Args: {
+      p_staff_id: string;
+      p_month_start: string;
+      p_month_end: string;
+    };
+    Returns: number;
+  };
 }
