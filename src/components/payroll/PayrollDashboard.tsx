@@ -396,7 +396,7 @@ export default function PayrollDashboard() {
           </div>
           <div className="mt-3">
             <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-gray-900">
-              ${summaryMetrics.totalBase.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              ₹{summaryMetrics.totalBase.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </span>
           </div>
           <div className="mt-2 text-[11px] text-gray-500">
@@ -412,7 +412,7 @@ export default function PayrollDashboard() {
           </div>
           <div className="mt-3">
             <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-amber-700">
-              -${summaryMetrics.totalDeductions.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              -₹{summaryMetrics.totalDeductions.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </span>
           </div>
           <div className="mt-2 text-[11px] text-amber-800/80 flex items-center justify-between flex-wrap gap-1">
@@ -429,7 +429,7 @@ export default function PayrollDashboard() {
           </div>
           <div className="mt-3">
             <span className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-green-600">
-              ${summaryMetrics.totalNet.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              ₹{summaryMetrics.totalNet.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </span>
           </div>
           <div className="mt-2 text-[11px] text-gray-500 flex items-center justify-between flex-wrap gap-1">
@@ -508,7 +508,7 @@ export default function PayrollDashboard() {
                   <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-gray-200 font-mono">
                     <div>
                       <span className="text-[11px] text-gray-500 font-sans block">Base Salary</span>
-                      <span className="text-gray-800">${item.baseSalary.toFixed(2)}</span>
+                      <span className="text-gray-800">₹{item.baseSalary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div>
                       <span className="text-[11px] text-gray-500 font-sans block">LOP Days</span>
@@ -519,12 +519,12 @@ export default function PayrollDashboard() {
                     <div>
                       <span className="text-[11px] text-gray-500 font-sans block">Deduction (LOP)</span>
                       <span className={item.deductionAmount > 0 ? 'text-amber-700 font-medium' : 'text-gray-400'}>
-                        -${item.deductionAmount.toFixed(2)}
+                        -₹{item.deductionAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                     <div>
                       <span className="text-[11px] text-gray-500 font-sans block">Net Payout</span>
-                      <span className="text-green-700 font-bold">${item.netSalary.toFixed(2)}</span>
+                      <span className="text-green-700 font-bold">₹{item.netSalary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                 </div>
@@ -556,7 +556,7 @@ export default function PayrollDashboard() {
                         {item.designation}
                       </td>
                       <td className="py-3.5 px-4 text-right font-mono text-xs text-gray-800">
-                        ${item.baseSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ₹{item.baseSalary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span
@@ -570,10 +570,10 @@ export default function PayrollDashboard() {
                         </span>
                       </td>
                       <td className={`py-3.5 px-4 text-right font-mono text-xs ${item.deductionAmount > 0 ? 'text-amber-700 font-semibold' : 'text-gray-400'}`}>
-                        -${item.deductionAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        -₹{item.deductionAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-3.5 px-4 text-right font-mono text-xs font-bold text-green-700">
-                        ${item.netSalary.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ₹{item.netSalary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         {item.isLocked ? (
