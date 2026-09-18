@@ -9,6 +9,8 @@ import {
   LogOut,
   Building2,
   Wallet,
+  BookOpen,
+  GraduationCap,
 } from 'lucide-react';
 import { signOutAction } from '@/app/actions/auth';
 
@@ -40,6 +42,18 @@ export default function DashboardNav({ adminName, adminEmail }: DashboardNavProp
       href: '/dashboard/payroll',
       icon: Wallet,
       isActive: pathname === '/dashboard/payroll',
+    },
+    {
+      label: 'Academic Oversight',
+      href: '/dashboard/oversight',
+      icon: BookOpen,
+      isActive: pathname === '/dashboard/oversight',
+    },
+    {
+      label: 'Faculty Hub (Teacher View)',
+      href: '/faculty',
+      icon: GraduationCap,
+      isActive: pathname === '/faculty',
     },
   ];
 
