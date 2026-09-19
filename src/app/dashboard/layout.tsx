@@ -1,7 +1,7 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import DashboardNav from '@/components/dashboard/DashboardNav';
+import AdminLayoutWrapper from '@/components/dashboard/AdminLayoutWrapper';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,33 +50,33 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     redirect('/faculty');
   }
 
-  // Fetch School Name for institutional header branding
+  // Fetch School Name and Code for institutional header branding
   let schoolName = 'Apex Global Academy';
+  let schoolCode = '100001';
   if (effectiveSchoolId) {
     const { data: school } = await supabase
       .from('schools')
-      .select('name')
+      .select('name, school_code')
       .eq('id', effectiveSchoolId)
       .maybeSingle();
     if (school?.name) {
       schoolName = school.name;
+    }
+    if (school?.school_code) {
+      schoolCode = school.school_code;
     }
   }
 
   const adminDisplayName = profile?.name || user.email?.split('@')[0] || 'School Principal';
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-      {/* Central Admin Navbar rendered ONCE here, eliminating all subpage duplication and bleed */}
-      <DashboardNav
-        adminName={adminDisplayName}
-        adminEmail={user.email}
-        schoolName={schoolName}
-        role="admin"
-      />
-      <main className="flex-1 w-full">
-        {children}
-      </main>
-    </div>
+    <AdminLayoutWrapper
+      adminName={adminDisplayName}
+      adminEmail={user.email}
+      schoolName={schoolName}
+      schoolCode={schoolCode}
+    >
+      {children}
+    </AdminLayoutWrapper>
   );
 }
