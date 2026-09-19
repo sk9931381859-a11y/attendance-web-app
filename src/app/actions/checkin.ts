@@ -64,20 +64,37 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
   const { token, device_id } = payload;
 
   if (!token || typeof token !== 'string') {
-    return { success: false, error: 'A valid 6-digit TOTP code is required.' };
+    return { success: false, error: 'A valid QR code or 6-digit code is required.' };
   }
 
-  // 1. Verify TOTP token from Kiosk QR code
+  // 1. Verify dynamic QR payload from Headless Kiosk or TOTP token
   let cleanToken = token.trim();
-  let scannedCompanyId: string | undefined = undefined;
+  let scannedSchoolId: string | undefined = undefined;
+  let isHeadlessKioskVerified = false;
 
   try {
     if (cleanToken.startsWith('{')) {
       const parsed = JSON.parse(cleanToken);
+      scannedSchoolId = parsed.school_id || parsed.schoolId || parsed.company_id || parsed.companyId || undefined;
+
+      // Headless Kiosk dynamic timestamp validation
+      if (scannedSchoolId && parsed.timestamp) {
+        const nowMs = Date.now();
+        const diffMs = Math.abs(nowMs - Number(parsed.timestamp));
+        // Anti-spoofing freshness check: Must be within 45 seconds of live stream
+        if (diffMs <= 45000) {
+          isHeadlessKioskVerified = true;
+        } else {
+          return {
+            success: false,
+            error: 'QR Code expired. The front desk kiosk rotates every 10 seconds. Please scan the live screen.',
+          };
+        }
+      }
+
       if (parsed.token) cleanToken = String(parsed.token).trim();
-      scannedCompanyId = parsed.company_id || parsed.companyId || undefined;
     } else if (cleanToken.includes(':')) {
-      // Handle colon-separated payloads like ATTENDANCE_TOTP:123456:company_id
+      // Handle colon-separated payloads like ATTENDANCE_TOTP:123456:school_id
       const parts = cleanToken.split(':');
       const otpCandidate = parts.find((p) => /^\d{6}$/.test(p.trim()));
       if (otpCandidate) {
@@ -87,20 +104,21 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.trim())
       );
       if (uuidCandidate) {
-        scannedCompanyId = uuidCandidate.trim();
+        scannedSchoolId = uuidCandidate.trim();
       }
     }
   } catch {}
 
-  // Strip non-digit characters from manual or scanned code
-  cleanToken = cleanToken.replace(/\D/g, '');
-
-  const isValidToken = verifyKioskToken(cleanToken);
-  if (!isValidToken) {
-    return {
-      success: false,
-      error: 'QR Code expired or invalid. Please scan the active kiosk screen.',
-    };
+  // If not already verified via Headless Kiosk timestamp, verify via TOTP algorithm
+  if (!isHeadlessKioskVerified) {
+    cleanToken = cleanToken.replace(/\D/g, '');
+    const isValidToken = verifyKioskToken(cleanToken);
+    if (!isValidToken) {
+      return {
+        success: false,
+        error: 'QR Code expired or invalid. Please scan the active kiosk screen.',
+      };
+    }
   }
 
   // 2. Cryptographic Proof of Identity: Extract teacher_id from session cookie
@@ -125,16 +143,16 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
     const dayStart = `${todayStr}T00:00:00.000Z`;
     const dayEnd = `${todayStr}T23:59:59.999Z`;
 
-    // Retrieve staff profile for authenticated user (including company_id)
+    // Retrieve staff profile for authenticated user (including school_id)
     let { data: profile } = await supabase
       .from('profiles')
-      .select('id, name, email, shift_start_time, designation, registered_device_id, device_locked_at, company_id')
+      .select('id, name, email, shift_start_time, designation, registered_device_id, device_locked_at, company_id, school_id')
       .eq('id', teacherId)
       .maybeSingle();
 
     if (!profile) {
-      // If profile not yet linked, provision with auth user metadata or fallback
-      const defaultCompanyId = user.user_metadata?.company_id || '11111111-1111-1111-1111-111111111111';
+      // If profile not yet linked, provision with auth user metadata or default school
+      const defaultSchoolId = user.user_metadata?.school_id || user.user_metadata?.company_id || '11111111-1111-1111-1111-111111111111';
       const { data: newProfile } = await supabase
         .from('profiles')
         .insert({
@@ -143,9 +161,10 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
           email: user.email,
           shift_start_time: '08:00:00',
           role: 'staff',
-          company_id: defaultCompanyId,
+          company_id: defaultSchoolId,
+          school_id: defaultSchoolId,
         })
-        .select('id, name, email, shift_start_time, designation, registered_device_id, device_locked_at, company_id')
+        .select('id, name, email, shift_start_time, designation, registered_device_id, device_locked_at, company_id, school_id')
         .single();
       if (newProfile) {
         profile = newProfile;
@@ -160,15 +179,16 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
       registered_device_id: null,
       device_locked_at: null,
       company_id: user.user_metadata?.company_id || '11111111-1111-1111-1111-111111111111',
+      school_id: user.user_metadata?.school_id || user.user_metadata?.company_id || '11111111-1111-1111-1111-111111111111',
     };
 
-    const teacherCompanyId = effectiveProfile.company_id || '11111111-1111-1111-1111-111111111111';
+    const teacherSchoolId = effectiveProfile.school_id || effectiveProfile.company_id || '11111111-1111-1111-1111-111111111111';
 
-    // Cross-Tenant Scope Check: Ensure the scanned QR belongs to the staff's organization
-    if (scannedCompanyId && scannedCompanyId !== teacherCompanyId) {
+    // Cross-Tenant Scope Check: Ensure the scanned QR belongs to the staff's school
+    if (scannedSchoolId && scannedSchoolId !== teacherSchoolId) {
       return {
         success: false,
-        error: 'This QR code belongs to a different organization. Please scan the kiosk at your school.',
+        error: 'This QR code belongs to a different school. Please scan the kiosk at your registered school.',
       };
     }
 
@@ -283,14 +303,15 @@ export async function submitCheckInAction(payload: CheckInPayload): Promise<Chec
       };
     }
 
-    // Commit check-in record to attendance_logs scoped to staff company_id
+    // Commit check-in record to attendance_logs scoped to staff school_id
     const { data: inserted, error: insertError } = await supabase
       .from('attendance_logs')
       .insert({
         teacher_id: teacherId,
         check_in_time: now.toISOString(),
         status,
-        company_id: teacherCompanyId,
+        school_id: teacherSchoolId,
+        company_id: teacherSchoolId,
       })
       .select()
       .single();

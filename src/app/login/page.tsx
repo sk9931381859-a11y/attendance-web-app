@@ -14,6 +14,8 @@ import {
   GraduationCap,
   UserCheck,
   CheckCircle2,
+  QrCode,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { loginWithRateLimit } from '@/app/login/actions';
@@ -29,18 +31,14 @@ function LoginForm() {
       : null
   );
 
+  const [schoolCode, setSchoolCode] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleFillDemoStaff = () => {
-    setEmail('teacher@attendance.app');
-    setPassword('StaffPassword123!');
-    setError(null);
-  };
-
-  const handleFillDemoAdmin = () => {
-    setEmail('admin@attendance.app');
-    setPassword('AdminPassword123!');
+  const handleFillCredentials = (fillCode: string, fillEmail: string, fillPassword: string) => {
+    setSchoolCode(fillCode);
+    setEmail(fillEmail);
+    setPassword(fillPassword);
     setError(null);
   };
 
@@ -79,20 +77,21 @@ function LoginForm() {
                 Attendance Hub
               </span>
               <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 border border-teal-200">
-                AUTH PORTAL
+                SAAS PORTAL
               </span>
             </div>
             <p className="text-[11px] text-gray-500 font-normal">
-              Unified Staff & Administrator Access
+              Multi-Tenant Staff &amp; Administrator Access
             </p>
           </div>
         </div>
 
         <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 transition shadow-sm"
+          href="/register-school"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg border border-teal-200 transition shadow-sm"
         >
-          &larr; Back to App
+          <Sparkles size={13} />
+          Register School
         </Link>
       </header>
 
@@ -105,10 +104,10 @@ function LoginForm() {
               <Lock size={22} />
             </div>
             <h1 className="text-xl font-bold text-gray-900 tracking-tight">
-              Sign In to Your Account
+              Sign In to Your School
             </h1>
             <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
-              Enter your credentials to access the staff check-in scanner or principal administration dashboard.
+              Enter your School Code and credentials to access your staff scanner or admin dashboard.
             </p>
           </div>
 
@@ -142,6 +141,33 @@ function LoginForm() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* School Code Input */}
+            <div>
+              <label
+                htmlFor="school_code"
+                className="block text-xs font-semibold text-gray-700 mb-1.5"
+              >
+                School Code
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  <Building2 size={15} />
+                </div>
+                <input
+                  id="school_code"
+                  name="school_code"
+                  type="text"
+                  required
+                  value={schoolCode}
+                  onChange={(e) => setSchoolCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. 100001"
+                  maxLength={10}
+                  className="w-full pl-9 pr-3 py-2.5 text-xs font-mono uppercase bg-gray-50/50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black transition tracking-wider"
+                />
+              </div>
+            </div>
+
+            {/* Email Address */}
             <div>
               <label
                 htmlFor="email"
@@ -167,6 +193,7 @@ function LoginForm() {
               </div>
             </div>
 
+            {/* Password */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label
@@ -230,22 +257,22 @@ function LoginForm() {
           {/* Quick Demo Access */}
           <div className="mt-6 pt-5 border-t border-gray-100">
             <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2.5 text-center">
-              Quick Demo Credentials
+              Quick Demo Credentials (Code: 100001)
             </span>
             <div className="grid grid-cols-1 gap-2">
               <button
                 type="button"
-                onClick={handleFillDemoStaff}
+                onClick={() => handleFillCredentials('100001', 'teacher@attendance.app', 'demo123456')}
                 className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition text-[11px] text-gray-700 flex items-center justify-between group cursor-pointer"
               >
                 <div className="flex items-center gap-2">
                   <GraduationCap size={14} className="text-teal-600" />
                   <div>
                     <span className="font-semibold text-gray-900 group-hover:text-black">
-                      Staff Portal (/scan)
+                      Teacher (Staff)
                     </span>
                     <span className="block text-[10px] text-gray-500 font-mono">
-                      teacher@attendance.app
+                      100001 &bull; teacher@attendance.app
                     </span>
                   </div>
                 </div>
@@ -256,17 +283,23 @@ function LoginForm() {
 
               <button
                 type="button"
-                onClick={handleFillDemoAdmin}
+                onClick={() =>
+                  handleFillCredentials(
+                    '100001',
+                    'buildwithsuraj001@gmail.com',
+                    '123456'
+                  )
+                }
                 className="w-full text-left px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition text-[11px] text-gray-700 flex items-center justify-between group cursor-pointer"
               >
                 <div className="flex items-center gap-2">
                   <UserCheck size={14} className="text-green-600" />
                   <div>
                     <span className="font-semibold text-gray-900 group-hover:text-black">
-                      Admin Dashboard (/dashboard)
+                      Principal (Admin)
                     </span>
                     <span className="block text-[10px] text-gray-500 font-mono">
-                      admin@attendance.app
+                      100001 &bull; buildwithsuraj001@gmail.com
                     </span>
                   </div>
                 </div>
@@ -276,15 +309,26 @@ function LoginForm() {
               </button>
             </div>
 
+            {/* Set up Front Desk Kiosk button */}
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <Link
+                href="/kiosk/setup"
+                className="w-full py-2.5 px-3 rounded-lg border-2 border-dashed border-teal-200 bg-teal-50/50 hover:bg-teal-50 hover:border-teal-400 text-teal-800 text-xs font-semibold flex items-center justify-center gap-2 transition group shadow-sm"
+              >
+                <QrCode size={15} className="text-teal-600 group-hover:scale-110 transition-transform" />
+                <span>Set up Front Desk Kiosk</span>
+              </Link>
+            </div>
+
             {/* Self-Serve Register Workspace Link */}
-            <div className="mt-5 pt-4 border-t border-gray-100 text-center">
+            <div className="mt-3 text-center">
               <p className="text-xs text-gray-500">
-                Need to register a new school or organization?{' '}
+                New school or institution?{' '}
                 <Link
-                  href="/register"
+                  href="/register-school"
                   className="font-semibold text-teal-700 hover:text-teal-900 hover:underline transition"
                 >
-                  Create workspace &rarr;
+                  Register School &rarr;
                 </Link>
               </p>
             </div>
@@ -294,7 +338,7 @@ function LoginForm() {
 
       {/* 3. FOOTER */}
       <footer className="text-center text-[11px] text-gray-500 max-w-md mx-auto w-full py-4">
-        Attendance Web App &bull; Cryptographic Device Lock &amp; RBAC
+        Attendance Web App &bull; Multi-Tenant Architecture &bull; RBAC
       </footer>
     </div>
   );

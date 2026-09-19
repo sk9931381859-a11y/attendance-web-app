@@ -1,12 +1,13 @@
 {
-  "name": "Attendance Web App",
-  "short_name": "Attendance",
-  "description": "Mobile Attendance Tracking System with Anti-Cheat and Geofencing",
-  "start_url": "/scan",
+  "name": "Attendance Hub - School Attendance & Kiosk",
+  "short_name": "Attendance Hub",
+  "description": "Multi-tenant school attendance platform with anti-cheat kiosk and geofencing.",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#000000",
-  "orientation": "portrait",
+  "theme_color": "#0d9488",
+  "orientation": "any",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

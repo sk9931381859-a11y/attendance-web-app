@@ -158,6 +158,7 @@ ALTER TABLE public.school_notices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.timetables ENABLE ROW LEVEL SECURITY;
 
 -- academic_classes policies
+DROP POLICY IF EXISTS "Allow authenticated read/write on academic_classes" ON public.academic_classes;
 CREATE POLICY "Allow authenticated read/write on academic_classes"
     ON public.academic_classes
     FOR ALL
@@ -166,6 +167,7 @@ CREATE POLICY "Allow authenticated read/write on academic_classes"
     WITH CHECK (true);
 
 -- academic_subjects policies
+DROP POLICY IF EXISTS "Allow authenticated read/write on academic_subjects" ON public.academic_subjects;
 CREATE POLICY "Allow authenticated read/write on academic_subjects"
     ON public.academic_subjects
     FOR ALL
@@ -174,6 +176,7 @@ CREATE POLICY "Allow authenticated read/write on academic_subjects"
     WITH CHECK (true);
 
 -- teacher_allocations policies
+DROP POLICY IF EXISTS "Allow authenticated read/write on teacher_allocations" ON public.teacher_allocations;
 CREATE POLICY "Allow authenticated read/write on teacher_allocations"
     ON public.teacher_allocations
     FOR ALL
@@ -182,6 +185,7 @@ CREATE POLICY "Allow authenticated read/write on teacher_allocations"
     WITH CHECK (true);
 
 -- chapters policies
+DROP POLICY IF EXISTS "Allow authenticated read/write on chapters" ON public.chapters;
 CREATE POLICY "Allow authenticated read/write on chapters"
     ON public.chapters
     FOR ALL
@@ -190,6 +194,7 @@ CREATE POLICY "Allow authenticated read/write on chapters"
     WITH CHECK (true);
 
 -- chapter_progress policies
+DROP POLICY IF EXISTS "Allow authenticated read/write on chapter_progress" ON public.chapter_progress;
 CREATE POLICY "Allow authenticated read/write on chapter_progress"
     ON public.chapter_progress
     FOR ALL
@@ -198,6 +203,7 @@ CREATE POLICY "Allow authenticated read/write on chapter_progress"
     WITH CHECK (true);
 
 -- leave_requests policies
+DROP POLICY IF EXISTS "Allow authenticated read/write on leave_requests" ON public.leave_requests;
 CREATE POLICY "Allow authenticated read/write on leave_requests"
     ON public.leave_requests
     FOR ALL
@@ -206,6 +212,7 @@ CREATE POLICY "Allow authenticated read/write on leave_requests"
     WITH CHECK (true);
 
 -- school_notices policies
+DROP POLICY IF EXISTS "Allow authenticated read/write on school_notices" ON public.school_notices;
 CREATE POLICY "Allow authenticated read/write on school_notices"
     ON public.school_notices
     FOR ALL
@@ -214,6 +221,7 @@ CREATE POLICY "Allow authenticated read/write on school_notices"
     WITH CHECK (true);
 
 -- timetables policies
+DROP POLICY IF EXISTS "Allow authenticated read/write on timetables" ON public.timetables;
 CREATE POLICY "Allow authenticated read/write on timetables"
     ON public.timetables
     FOR ALL

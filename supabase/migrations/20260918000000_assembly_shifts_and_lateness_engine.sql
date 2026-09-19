@@ -55,8 +55,54 @@ BEGIN
     END IF;
 END $$;
 
--- 3. Modify attendance table:
--- Add is_late (BOOLEAN, default false) and minutes_late (INTEGER, default 0)
+-- 3. Create or modify attendance table:
+CREATE TABLE IF NOT EXISTS public.attendance (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    campus_id UUID,
+    punched_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT timezone('utc'::text, now()),
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    status TEXT NOT NULL DEFAULT 'on_time',
+    is_late BOOLEAN NOT NULL DEFAULT false,
+    minutes_late INTEGER NOT NULL DEFAULT 0,
+    distance_meters NUMERIC,
+    latitude NUMERIC,
+    longitude NUMERIC,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+-- Indexes for performance and daily aggregation
+CREATE INDEX IF NOT EXISTS idx_attendance_user_id ON public.attendance(user_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_date ON public.attendance(date);
+CREATE INDEX IF NOT EXISTS idx_attendance_punched_at ON public.attendance(punched_at);
+CREATE INDEX IF NOT EXISTS idx_attendance_is_late ON public.attendance(is_late);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow all to select attendance" ON public.attendance;
+CREATE POLICY "Allow all to select attendance"
+    ON public.attendance
+    FOR SELECT
+    TO anon, authenticated, service_role
+    USING (true);
+
+DROP POLICY IF EXISTS "Allow anon and authenticated to insert attendance" ON public.attendance;
+CREATE POLICY "Allow anon and authenticated to insert attendance"
+    ON public.attendance
+    FOR INSERT
+    TO anon, authenticated, service_role
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow authenticated full access to attendance" ON public.attendance;
+CREATE POLICY "Allow authenticated full access to attendance"
+    ON public.attendance
+    FOR ALL
+    TO authenticated, service_role
+    USING (true)
+    WITH CHECK (true);
+
+-- Ensure lateness columns exist on attendance and attendance_logs
 ALTER TABLE public.attendance 
     ADD COLUMN IF NOT EXISTS is_late BOOLEAN NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS minutes_late INTEGER NOT NULL DEFAULT 0;

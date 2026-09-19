@@ -21,11 +21,22 @@ export interface Shift {
   created_at?: string;
 }
 
+export interface School {
+  id: string;
+  name: string;
+  address?: string | null;
+  pincode?: string | null;
+  school_code: string;
+  kiosk_pin: string;
+  created_at?: string;
+}
+
 export interface Profile {
   id: string;
   name: string;
   email?: string | null;
   role: 'staff' | 'admin';
+  school_id?: string | null;
   designation?: string | null;
   shift_start_time?: string | null;
   shift_id?: string | null;
@@ -46,6 +57,7 @@ export interface AttendanceLog {
   status: 'present' | 'late' | 'absent';
   is_late: boolean;
   minutes_late: number;
+  school_id?: string | null;
   company_id?: string;
   created_at?: string;
 }
@@ -126,6 +138,7 @@ export interface ChapterProgress {
   id: string;
   chapter_id: string;
   staff_id: string;
+  school_id?: string | null;
   theory_completed: boolean;
   qa_completed: boolean;
   notebooks_checked: boolean;
@@ -140,6 +153,7 @@ export interface ChapterProgress {
 export interface LeaveRequest {
   id: string;
   staff_id: string;
+  school_id?: string | null;
   start_date: string;
   end_date: string;
   leave_type: string;

@@ -4,71 +4,52 @@ import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  BarChart2,
-  Users,
-  LogOut,
   Building2,
-  Wallet,
-  BookOpen,
   QrCode,
-  ExternalLink,
+  CalendarCheck,
+  FileText,
+  BookOpen,
+  LogOut,
+  ShieldCheck,
+  Smartphone,
 } from 'lucide-react';
 import { signOutAction } from '@/app/actions/auth';
-import TeacherNav from './TeacherNav';
 
-export interface DashboardNavProps {
-  adminName: string;
-  adminEmail?: string | null;
+interface TeacherNavProps {
+  teacherName: string;
+  teacherEmail?: string | null;
   schoolName?: string | null;
-  role?: 'admin' | 'staff' | string | null;
 }
 
-export default function DashboardNav({
-  adminName,
-  adminEmail,
-  schoolName,
-  role = 'admin',
-}: DashboardNavProps) {
+export default function TeacherNav({ teacherName, teacherEmail, schoolName }: TeacherNavProps) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoggingOut, startLogout] = useTransition();
 
-  // If role is staff, render the dedicated Teacher Navbar
-  if (role === 'staff') {
-    return (
-      <TeacherNav
-        teacherName={adminName}
-        teacherEmail={adminEmail}
-        schoolName={schoolName}
-      />
-    );
-  }
-
-  // Admin Nav Items
   const navItems = [
     {
-      label: 'Live Monitoring',
-      href: '/dashboard',
-      icon: BarChart2,
-      isActive: pathname === '/dashboard',
+      label: 'QR Scanner',
+      href: '/scan',
+      icon: QrCode,
+      isActive: pathname === '/scan',
     },
     {
-      label: 'Staff Directory',
-      href: '/dashboard/manage',
-      icon: Users,
-      isActive: pathname.startsWith('/dashboard/manage'),
+      label: 'My Attendance',
+      href: '/faculty',
+      icon: CalendarCheck,
+      isActive: pathname === '/faculty',
     },
     {
-      label: 'Payroll',
-      href: '/dashboard/payroll',
-      icon: Wallet,
-      isActive: pathname.startsWith('/dashboard/payroll'),
+      label: 'Leave Requests',
+      href: '/faculty#leave-section',
+      icon: FileText,
+      isActive: false,
     },
     {
-      label: 'Academic Oversight',
-      href: '/dashboard/oversight',
+      label: 'My Syllabus',
+      href: '/faculty#syllabus-section',
       icon: BookOpen,
-      isActive: pathname.startsWith('/dashboard/oversight'),
+      isActive: false,
     },
   ];
 
@@ -80,7 +61,7 @@ export default function DashboardNav({
 
   return (
     <nav className="border-b border-gray-200 bg-white px-4 sm:px-6 py-3 flex items-center justify-between shadow-xs sticky top-0 z-20">
-      {/* Left: Brand Logo + Text + Tiny ADMIN Badge */}
+      {/* Left: Brand Logo + Institution Name + STAFF Badge */}
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 shadow-xs">
           <Building2 size={18} className="text-teal-600" />
@@ -90,23 +71,23 @@ export default function DashboardNav({
             <span className="text-sm font-bold text-gray-900 tracking-tight">
               {schoolName || 'Attendance Hub'}
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
-              ADMIN
+            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 font-mono">
+              STAFF
             </span>
           </div>
           <p className="text-[11px] text-gray-500 font-normal">
-            Principal Administration &amp; Oversight
+            Faculty Portal &bull; Attendance &amp; Academics
           </p>
         </div>
       </div>
 
-      {/* Center: Black Pill Navigation Toggle */}
+      {/* Center: Navigation Tabs */}
       <div className="hidden md:flex md:items-center gap-1 bg-gray-100/80 p-1 rounded-full border border-gray-200">
         {navItems.map((item) => {
           const Icon = item.icon;
           return item.isActive ? (
             <span
-              key={item.href}
+              key={item.label}
               className="bg-black text-white rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs font-semibold shadow-xs"
             >
               <Icon size={14} />
@@ -114,7 +95,7 @@ export default function DashboardNav({
             </span>
           ) : (
             <Link
-              key={item.href}
+              key={item.label}
               href={item.href}
               className="text-gray-600 hover:text-gray-900 px-3.5 py-1.5 rounded-full text-xs font-medium transition flex items-center gap-1.5 hover:bg-gray-200/60"
             >
@@ -125,40 +106,36 @@ export default function DashboardNav({
         })}
       </div>
 
-      {/* Right: Kiosk Launch Button + User Info + Sign Out */}
-      <div className="flex items-center gap-3 sm:gap-3.5">
-        {/* Launch Kiosk in New Tab */}
-        <a
-          href="/kiosk"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-semibold transition shadow-xs group"
-          title="Launch Headless Front Desk Kiosk in New Tab"
+      {/* Right: Staff Info + Scanner Button + Sign Out */}
+      <div className="flex items-center gap-3">
+        <Link
+          href="/scan"
+          className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold transition shadow-xs"
         >
-          <QrCode size={14} className="text-teal-600 group-hover:scale-110 transition-transform" />
-          <span className="hidden sm:inline">Launch Kiosk</span>
-          <ExternalLink size={12} className="text-teal-500" />
-        </a>
+          <Smartphone size={13} />
+          <span>Launch Scanner</span>
+        </Link>
 
         <div className="text-right hidden lg:block">
           <div className="text-xs font-semibold text-gray-900 leading-tight">
-            {adminName}
+            {teacherName}
           </div>
           <div className="text-[10px] text-gray-500 font-mono truncate max-w-[150px]">
-            {adminEmail || 'admin@attendance.app'}
+            {teacherEmail || 'faculty@school.edu'}
           </div>
         </div>
 
         <button
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="bg-black hover:bg-gray-800 disabled:opacity-50 text-white rounded-lg px-3 py-1.5 flex items-center gap-1.5 text-xs font-semibold transition shadow-xs cursor-pointer"
+          className="bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-900 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 text-xs font-medium transition cursor-pointer disabled:opacity-50"
+          title="Sign Out"
         >
           <LogOut size={13} />
           <span className="hidden sm:inline">{isLoggingOut ? '...' : 'Sign Out'}</span>
         </button>
 
-        {/* Mobile Hamburger Menu Button */}
+        {/* Mobile Menu Button */}
         <button
           className="md:hidden p-1.5 text-gray-600 hover:text-gray-900 focus:outline-none"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -174,37 +151,24 @@ export default function DashboardNav({
         </button>
       </div>
 
-      {/* Mobile Dropdown Overlay */}
+      {/* Mobile Dropdown */}
       {isMobileMenuOpen && (
-        <div className="md:hidden flex flex-col px-4 pt-2 pb-4 space-y-2 bg-white border-b border-gray-100 shadow-sm w-full absolute left-0 top-full z-50">
+        <div className="md:hidden absolute left-0 top-full w-full bg-white border-b border-gray-200 shadow-lg px-4 py-3 space-y-2 z-50">
           {navItems.map((item) => (
             <Link
-              key={item.href}
+              key={item.label}
               href={item.href}
               onClick={() => setIsMobileMenuOpen(false)}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-lg font-semibold text-xs transition-colors ${
+              className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition ${
                 item.isActive
                   ? 'bg-black text-white'
                   : 'text-gray-800 bg-gray-50 hover:bg-gray-100'
               }`}
             >
-              <item.icon size={16} />
+              <item.icon size={15} />
               <span>{item.label}</span>
             </Link>
           ))}
-          <a
-            href="/kiosk"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="flex items-center justify-between px-4 py-3 rounded-lg font-semibold text-xs text-teal-800 bg-teal-50 border border-teal-200"
-          >
-            <div className="flex items-center gap-2.5">
-              <QrCode size={16} className="text-teal-600" />
-              <span>Open Front Desk Kiosk</span>
-            </div>
-            <ExternalLink size={14} className="text-teal-500" />
-          </a>
         </div>
       )}
     </nav>
