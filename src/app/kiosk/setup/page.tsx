@@ -12,6 +12,7 @@ import {
   Sparkles,
   ArrowLeft,
   Lock,
+  LayoutDashboard,
 } from 'lucide-react';
 import Link from 'next/link';
 import { verifyKioskPinAction } from '../actions';
@@ -68,60 +69,69 @@ export default function KioskSetupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col justify-between font-sans selection:bg-teal-500 selection:text-white">
-      {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-950/60 backdrop-blur-md px-6 py-4 flex items-center justify-between sticky top-0 z-20">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between font-sans antialiased">
+      {/* Top Header - Matches Principal Dashboard Executive Design System */}
+      <header className="h-16 border-b border-slate-200 bg-white px-4 sm:px-8 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 shadow-inner">
-            <Building2 size={20} />
+          <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-xs">
+            <Building2 size={18} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-base font-bold text-white tracking-tight">
+              <span className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-tight">
                 Attendance Hub Kiosk
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                HEADLESS FRONT DESK
+              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                FRONT DESK TERMINAL
               </span>
             </div>
-            <p className="text-xs text-slate-400">
-              Terminal Hardware Pairing &bull; No User Session Required
+            <p className="text-[11px] text-slate-500 hidden sm:block">
+              Hardware Terminal Pairing &bull; Standalone Check-In Station
             </p>
           </div>
         </div>
 
-        <Link
-          href="/login"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white px-3 py-1.5 rounded-lg border border-slate-800 hover:bg-slate-800 transition"
-        >
-          <ArrowLeft size={13} />
-          <span>Staff Login</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 shadow-xs transition"
+          >
+            <LayoutDashboard size={14} className="text-slate-500" />
+            <span className="hidden sm:inline">Principal Dashboard</span>
+          </Link>
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 px-3 py-2 rounded-lg hover:bg-slate-100 transition"
+          >
+            <ArrowLeft size={13} />
+            <span>Login</span>
+          </Link>
+        </div>
       </header>
 
-      {/* Main Form Container */}
+      {/* Main Setup Card Container */}
       <main className="flex-1 max-w-md mx-auto w-full p-4 sm:p-6 my-auto flex flex-col justify-center">
-        <div className="bg-slate-800/60 border border-slate-700/70 rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
-          {/* Header */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-xs">
+          {/* Card Header */}
           <div className="text-center mb-6">
-            <div className="w-14 h-14 bg-teal-500/10 border border-teal-500/30 rounded-2xl flex items-center justify-center mx-auto text-teal-400 mb-3 shadow-inner">
-              <KeyRound size={26} />
+            <div className="w-13 h-13 bg-indigo-50 border border-indigo-200 rounded-2xl flex items-center justify-center mx-auto text-indigo-600 mb-3 shadow-xs">
+              <KeyRound size={24} />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               Pair Front Desk Kiosk
             </h1>
-            <p className="text-xs text-slate-400 mt-1.5 max-w-xs mx-auto leading-relaxed">
+            <p className="text-xs text-slate-500 mt-1.5 max-w-xs mx-auto leading-relaxed">
               Enter your institution&apos;s School Code and Kiosk PIN to lock this device as an official check-in terminal.
             </p>
           </div>
 
           {/* Success Banner */}
           {isSuccess && (
-            <div className="mb-6 p-4 bg-teal-950/80 border border-teal-500/50 rounded-xl text-xs text-teal-200 flex items-center gap-3 animate-in fade-in duration-300">
-              <ShieldCheck size={22} className="text-teal-400 shrink-0" />
+            <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-3 animate-in fade-in duration-300">
+              <ShieldCheck size={22} className="text-emerald-600 shrink-0" />
               <div>
-                <div className="font-bold text-teal-300">Terminal Paired Successfully!</div>
-                <div className="text-[11px] text-teal-200/80 mt-0.5">
+                <div className="font-bold text-emerald-900">Terminal Paired Successfully!</div>
+                <div className="text-[11px] text-emerald-700 mt-0.5">
                   Bound to <strong>{pairedSchool}</strong>. Launching dynamic QR stream...
                 </div>
               </div>
@@ -130,11 +140,11 @@ export default function KioskSetupPage() {
 
           {/* Error Banner */}
           {error && !isSuccess && (
-            <div className="mb-6 p-3.5 bg-red-950/80 border border-red-500/40 rounded-xl text-xs text-red-200 flex items-start gap-2.5 animate-in fade-in duration-200">
-              <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+            <div className="mb-6 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2.5 animate-in fade-in duration-200">
+              <AlertCircle size={16} className="text-rose-600 shrink-0 mt-0.5" />
               <div className="flex-1">
-                <div className="font-semibold text-red-300">Pairing Verification Failed</div>
-                <div className="text-red-300/80 text-[11px] mt-0.5">{error}</div>
+                <div className="font-semibold text-rose-900">Pairing Verification Failed</div>
+                <div className="text-rose-700 text-[11px] mt-0.5">{error}</div>
               </div>
             </div>
           )}
@@ -144,12 +154,12 @@ export default function KioskSetupPage() {
             <div>
               <label
                 htmlFor="school_code"
-                className="block text-xs font-semibold text-slate-300 mb-1.5"
+                className="block text-xs font-semibold text-slate-700 mb-1.5"
               >
                 School Code (6 Digits)
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <Building2 size={16} />
                 </div>
                 <input
@@ -161,7 +171,7 @@ export default function KioskSetupPage() {
                   placeholder="e.g. 100001"
                   maxLength={10}
                   disabled={isPending || isSuccess}
-                  className="w-full pl-9 pr-3 py-2.5 text-sm font-mono uppercase bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-400 transition tracking-wider"
+                  className="w-full pl-9 pr-3 py-2.5 text-sm font-mono uppercase bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition tracking-wider"
                 />
               </div>
             </div>
@@ -169,12 +179,12 @@ export default function KioskSetupPage() {
             <div>
               <label
                 htmlFor="kiosk_pin"
-                className="block text-xs font-semibold text-slate-300 mb-1.5"
+                className="block text-xs font-semibold text-slate-700 mb-1.5"
               >
                 Kiosk Master PIN (4 Digits)
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <Lock size={16} />
                 </div>
                 <input
@@ -186,7 +196,7 @@ export default function KioskSetupPage() {
                   placeholder="••••"
                   maxLength={6}
                   disabled={isPending || isSuccess}
-                  className="w-full pl-9 pr-3 py-2.5 text-sm font-mono bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-400 transition tracking-widest"
+                  className="w-full pl-9 pr-3 py-2.5 text-sm font-mono bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition tracking-widest"
                 />
               </div>
             </div>
@@ -194,16 +204,16 @@ export default function KioskSetupPage() {
             <button
               type="submit"
               disabled={isPending || isSuccess}
-              className="w-full py-3 bg-teal-500 hover:bg-teal-400 disabled:opacity-50 text-slate-950 font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-lg shadow-teal-500/20 flex items-center justify-center gap-2 cursor-pointer mt-3"
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs uppercase tracking-wider rounded-xl transition shadow-xs flex items-center justify-center gap-2 cursor-pointer mt-2 active:scale-95 disabled:opacity-50"
             >
               {isPending ? (
                 <>
-                  <RefreshCw size={15} className="animate-spin text-slate-950" />
+                  <RefreshCw size={15} className="animate-spin text-white" />
                   <span>Verifying Master PIN...</span>
                 </>
               ) : isSuccess ? (
                 <>
-                  <ShieldCheck size={16} className="text-slate-950" />
+                  <ShieldCheck size={16} className="text-white" />
                   <span>Terminal Paired</span>
                 </>
               ) : (
@@ -216,7 +226,7 @@ export default function KioskSetupPage() {
           </form>
 
           {/* Quick Demo Credentials for Fast Testing */}
-          <div className="mt-6 pt-5 border-t border-slate-700/60">
+          <div className="mt-6 pt-5 border-t border-slate-100">
             <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5 text-center">
               Quick Setup Demo Preset
             </span>
@@ -224,20 +234,20 @@ export default function KioskSetupPage() {
               type="button"
               onClick={handleFillDemo}
               disabled={isPending || isSuccess}
-              className="w-full text-left px-3.5 py-2.5 rounded-xl bg-slate-900/60 hover:bg-slate-900 border border-slate-700/80 transition text-xs text-slate-300 flex items-center justify-between group cursor-pointer"
+              className="w-full text-left px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 transition text-xs text-slate-700 flex items-center justify-between group cursor-pointer shadow-xs"
             >
               <div className="flex items-center gap-2.5">
-                <Sparkles size={16} className="text-teal-400" />
+                <Sparkles size={16} className="text-indigo-600" />
                 <div>
-                  <span className="font-semibold text-white group-hover:text-teal-300 transition">
+                  <span className="font-semibold text-slate-900 group-hover:text-indigo-700 transition">
                     Apex Global Academy
                   </span>
-                  <span className="block text-[10px] text-slate-400 font-mono">
+                  <span className="block text-[10px] text-slate-500 font-mono">
                     Code: 100001 &bull; PIN: 1234
                   </span>
                 </div>
               </div>
-              <span className="text-[10px] font-bold text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/30">
+              <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
                 Auto-fill
               </span>
             </button>
@@ -246,7 +256,7 @@ export default function KioskSetupPage() {
       </main>
 
       {/* Footer */}
-      <footer className="text-center text-xs text-slate-500 max-w-md mx-auto w-full py-4">
+      <footer className="text-center text-xs text-slate-400 max-w-md mx-auto w-full py-4">
         Front Desk Kiosk &bull; Cryptographic Pairing &bull; Standalone Terminal
       </footer>
     </div>
