@@ -88,7 +88,7 @@ export default function AdminHeader({
           href="/kiosk"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs sm:text-sm rounded-md px-3 sm:px-4 py-2 shadow-xs transition active:scale-95 group"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md px-4 py-2 inline-flex items-center gap-2 text-sm shadow-xs transition active:scale-95 group"
           title="Open Headless Scanner Kiosk in New Tab"
         >
           <QrCode size={16} className="group-hover:scale-110 transition-transform" />

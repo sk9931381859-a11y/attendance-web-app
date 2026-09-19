@@ -636,7 +636,7 @@ export default function DashboardOverviewPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-                    Live Today&apos;s Attendance
+                    {"Live Today's Attendance"}
                   </h2>
                   <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
                     {staffRows.length} Registered
