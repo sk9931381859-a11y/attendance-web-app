@@ -84,7 +84,7 @@ export default function AdminSidebar({
                 </span>
               </div>
               <span className="text-[10px] font-semibold tracking-wider text-emerald-400 uppercase">
-                EXECUTIVE SUITE
+                PRINCIPAL&apos;S DASHBOARD
               </span>
             </div>
           </div>

@@ -460,7 +460,7 @@ export default function DashboardOverviewPage() {
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-              Executive Overview
+              Principal&apos;s Live Dashboard
             </h1>
             {/* Live Realtime Pulsing Status */}
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-xs">

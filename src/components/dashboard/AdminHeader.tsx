@@ -73,7 +73,7 @@ export default function AdminHeader({
 
         <div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-tight">
-            Institutional Dashboard
+            Principal&apos;s Dashboard
           </h2>
           <p className="text-[11px] text-slate-500 hidden sm:block">
             {schoolName || 'Apex Global Academy'} &bull; Real-time Oversight
