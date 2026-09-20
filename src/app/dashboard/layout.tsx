@@ -1,7 +1,8 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import AdminLayoutWrapper from '@/components/dashboard/AdminLayoutWrapper';
+import Sidebar from '@/components/dashboard/Sidebar';
+import AdminHeader from '@/components/dashboard/AdminHeader';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ interface DashboardLayoutProps {
  * 3. Strictly enforces role boundaries:
  *    - Staff (Teachers) are immediately routed to /faculty.
  *    - Unauthenticated users are routed to /login.
- * 4. Renders the Unified Admin Navbar centrally to prevent layout/nav bleed across subpages.
+ * 4. Renders the collapsible light-theme Sidebar and unified top header.
  */
 export default async function DashboardLayout({ children }: DashboardLayoutProps) {
   const supabase = createClient();
@@ -70,13 +71,25 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
   const adminDisplayName = profile?.name || user.email?.split('@')[0] || 'School Principal';
 
   return (
-    <AdminLayoutWrapper
-      adminName={adminDisplayName}
-      adminEmail={user.email}
-      schoolName={schoolName}
-      schoolCode={schoolCode}
-    >
-      {children}
-    </AdminLayoutWrapper>
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans antialiased">
+      {/* 1. Collapsible Light-Themed Sidebar */}
+      <Sidebar
+        schoolName={schoolName}
+        schoolCode={schoolCode}
+      />
+
+      {/* 2. Main Content Canvas */}
+      <div className="flex flex-col flex-1 min-h-screen min-w-0">
+        <AdminHeader
+          adminName={adminDisplayName}
+          adminEmail={user.email}
+          schoolName={schoolName}
+        />
+
+        <main className="flex-1 w-full bg-slate-50">
+          {children}
+        </main>
+      </div>
+    </div>
   );
 }

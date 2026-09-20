@@ -15,6 +15,11 @@ import ClassSubjectList from './ClassSubjectList';
 import SyllabusBuilder from './SyllabusBuilder';
 import AllocationModal from './AllocationModal';
 import AcademicsSkeleton from './AcademicsSkeleton';
+import {
+  fetchAvailableFaculty,
+  assignFaculty,
+  unassignFaculty,
+} from '@/app/dashboard/academics/actions';
 
 const SLOW_INTERNET_ERROR_MESSAGE =
   'Connection slow. Please check your internet and try again.';
@@ -101,7 +106,7 @@ export default function AcademicsMasterClient() {
         subjectsRes,
         chaptersRes,
         allocationsRes,
-        teachersRes,
+        facultyRes,
       ] = await Promise.all([
         withTimeout(
           supabase
@@ -130,22 +135,14 @@ export default function AcademicsMasterClient() {
             .select('*')
             .eq('school_id', activeSchoolId)
         ),
-        withTimeout(
-          supabase
-            .from('profiles')
-            .select('id, name, email, role, designation, school_id')
-            .eq('school_id', activeSchoolId)
-            .eq('role', 'staff')
-            .order('name', { ascending: true })
-        ),
+        fetchAvailableFaculty(),
       ]);
 
       if (
         classesRes.error ||
         subjectsRes.error ||
         chaptersRes.error ||
-        allocationsRes.error ||
-        teachersRes.error
+        allocationsRes.error
       ) {
         throw new Error('QUERY_FAILED');
       }
@@ -154,7 +151,7 @@ export default function AcademicsMasterClient() {
       const fetchedSubjects = subjectsRes.data || [];
       const fetchedChapters = chaptersRes.data || [];
       const fetchedAllocations = allocationsRes.data || [];
-      const fetchedTeachers = teachersRes.data || [];
+      const fetchedTeachers = facultyRes.success ? (facultyRes.data as any) : [];
 
       setClasses(fetchedClasses);
       setSubjects(fetchedSubjects);
@@ -348,70 +345,53 @@ export default function AcademicsMasterClient() {
     }
   };
 
-  // Allocate teacher to subject
+  // Allocate teacher to subject via Server Action
   const handleAllocateTeacher = async (
     subjectId: string,
     teacherId: string
   ): Promise<boolean> => {
-    if (!schoolId) return false;
     try {
-      // Upsert allocation or delete previous allocation for this subject
-      // First, remove any existing allocation for this subject
-      await withTimeout(
-        supabase.from('teacher_allocations').delete().eq('subject_id', subjectId)
-      );
+      const res = await assignFaculty(subjectId, teacherId);
 
-      const { data, error } = await withTimeout(
-        supabase
-          .from('teacher_allocations')
-          .insert([
-            {
-              school_id: schoolId,
-              teacher_id: teacherId,
-              subject_id: subjectId,
-              staff_id: teacherId,
-            },
-          ])
-          .select()
-          .single()
-      );
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to assign faculty.');
+      }
 
-      if (error) throw error;
+      if (res.allocation) {
+        setAllocations((prev) => [
+          ...prev.filter((a) => a.subject_id !== subjectId),
+          res.allocation!,
+        ]);
+      }
 
-      setAllocations((prev) => [
-        ...prev.filter((a) => a.subject_id !== subjectId),
-        data,
-      ]);
+      // Re-fetch faculty list in case names updated
+      const facRes = await fetchAvailableFaculty();
+      if (facRes.success && facRes.data) {
+        setTeachers(facRes.data as any);
+      }
 
-      const teacher = teachers.find((t) => t.id === teacherId);
-      toast.success(
-        teacher?.name
-          ? `Assigned to ${teacher.name}.`
-          : 'Faculty allocated successfully.'
-      );
       return true;
     } catch (err: any) {
       console.error('Allocate teacher error:', err);
-      toast.error(SLOW_INTERNET_ERROR_MESSAGE);
+      toast.error(err.message || 'Failed to allocate faculty.');
       return false;
     }
   };
 
-  // Unallocate teacher from subject
+  // Unallocate teacher from subject via Server Action
   const handleUnallocateTeacher = async (subjectId: string): Promise<boolean> => {
     try {
-      const { error } = await withTimeout(
-        supabase.from('teacher_allocations').delete().eq('subject_id', subjectId)
-      );
+      const res = await unassignFaculty(subjectId);
 
-      if (error) throw error;
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to unassign faculty.');
+      }
 
       setAllocations((prev) => prev.filter((a) => a.subject_id !== subjectId));
-      toast.success('Faculty assignment removed.');
       return true;
     } catch (err: any) {
       console.error('Unallocate teacher error:', err);
-      toast.error(SLOW_INTERNET_ERROR_MESSAGE);
+      toast.error(err.message || 'Failed to unassign faculty.');
       return false;
     }
   };

@@ -61,15 +61,19 @@ export default function AdminHeader({
     <header className="h-16 border-b border-slate-200 bg-white px-4 sm:px-8 flex items-center justify-between sticky top-0 z-20 select-none">
       {/* Left: Mobile Toggle + Context Title */}
       <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 mr-2 sm:mr-4">
-        {onOpenMobileMenu && (
-          <button
-            onClick={onOpenMobileMenu}
-            className="md:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition shrink-0"
-            aria-label="Open navigation menu"
-          >
-            <Menu size={20} />
-          </button>
-        )}
+        <button
+          onClick={() => {
+            if (onOpenMobileMenu) {
+              onOpenMobileMenu();
+            } else if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('open-mobile-sidebar'));
+            }
+          }}
+          className="md:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition shrink-0 cursor-pointer"
+          aria-label="Open navigation menu"
+        >
+          <Menu size={20} />
+        </button>
 
         <div className="min-w-0">
           <h2 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 tracking-tight leading-tight truncate">

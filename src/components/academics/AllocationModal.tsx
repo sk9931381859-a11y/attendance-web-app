@@ -1,18 +1,20 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import {
   X,
-  Search,
   UserCheck,
   UserX,
   Loader2,
-  Check,
-  ShieldCheck,
   GraduationCap,
   Sparkles,
+  AlertCircle,
+  User,
+  ShieldCheck,
 } from 'lucide-react';
 import { Profile, AcademicSubject, AcademicClass } from '@/types/supabase';
+import { fetchAvailableFaculty, AvailableFaculty } from '@/app/dashboard/academics/actions';
 
 interface AllocationModalProps {
   isOpen: boolean;
@@ -20,20 +22,10 @@ interface AllocationModalProps {
   subject: AcademicSubject | null;
   activeClass: AcademicClass | null;
   currentTeacherId?: string | null;
-  teachers: Profile[];
+  teachers?: Profile[];
   onAllocate: (subjectId: string, teacherId: string) => Promise<boolean>;
   onUnallocate: (subjectId: string) => Promise<boolean>;
 }
-
-const AVATAR_COLORS = [
-  'bg-emerald-600 text-white',
-  'bg-indigo-600 text-white',
-  'bg-sky-600 text-white',
-  'bg-violet-600 text-white',
-  'bg-amber-600 text-white',
-  'bg-rose-600 text-white',
-  'bg-teal-600 text-white',
-];
 
 export default function AllocationModal({
   isOpen,
@@ -41,53 +33,121 @@ export default function AllocationModal({
   subject,
   activeClass,
   currentTeacherId,
-  teachers,
+  teachers = [],
   onAllocate,
   onUnallocate,
 }: AllocationModalProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [facultyList, setFacultyList] = useState<AvailableFaculty[]>([]);
+  const [isLoadingFaculty, setIsLoadingFaculty] = useState<boolean>(false);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(
     currentTeacherId || null
   );
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Sync selected teacher with incoming currentTeacherId when modal opens
-  React.useEffect(() => {
-    if (isOpen) {
-      setSelectedTeacherId(currentTeacherId || null);
-      setSearchQuery('');
-    }
-  }, [isOpen, currentTeacherId]);
+  // 1. Fetch available staff faculty directly from server action when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
 
-  const filteredTeachers = useMemo(() => {
-    if (!searchQuery.trim()) return teachers;
-    const q = searchQuery.toLowerCase();
-    return teachers.filter(
-      (t) =>
-        t.name?.toLowerCase().includes(q) ||
-        t.email?.toLowerCase().includes(q) ||
-        (t as any).designation?.toLowerCase().includes(q)
-    );
-  }, [teachers, searchQuery]);
+    setSelectedTeacherId(currentTeacherId || null);
+
+    let isMounted = true;
+    const loadFaculty = async () => {
+      setIsLoadingFaculty(true);
+      try {
+        const res = await fetchAvailableFaculty();
+        if (isMounted) {
+          if (res.success && res.data.length > 0) {
+            setFacultyList(res.data);
+          } else if (teachers.length > 0) {
+            // Fallback to teachers passed from parent if any
+            setFacultyList(
+              teachers.map((t) => ({
+                id: t.id,
+                name: t.name,
+                email: t.email,
+                role: t.role || 'staff',
+                designation: (t as any).designation || null,
+                school_id: t.school_id,
+              }))
+            );
+          } else {
+            setFacultyList([]);
+          }
+        }
+      } catch (err: any) {
+        console.error('Error fetching staff faculty in modal:', err);
+        if (teachers.length > 0 && isMounted) {
+          setFacultyList(
+            teachers.map((t) => ({
+              id: t.id,
+              name: t.name,
+              email: t.email,
+              role: t.role || 'staff',
+              designation: (t as any).designation || null,
+              school_id: t.school_id,
+            }))
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingFaculty(false);
+        }
+      }
+    };
+
+    loadFaculty();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, currentTeacherId, teachers]);
 
   if (!isOpen || !subject) return null;
 
+  // Selected faculty record
+  const selectedFaculty = facultyList.find((f) => f.id === selectedTeacherId) || null;
+  const currentFaculty = facultyList.find((f) => f.id === currentTeacherId) || null;
+
+  // 2. Submit Allocation with try/catch, loading spinner, and UI toast
   const handleConfirm = async () => {
-    if (!selectedTeacherId) return;
+    if (!selectedTeacherId || !subject || isSubmitting) return;
+
     setIsSubmitting(true);
-    const success = await onAllocate(subject.id, selectedTeacherId);
-    setIsSubmitting(false);
-    if (success) {
-      onClose();
+    try {
+      const success = await onAllocate(subject.id, selectedTeacherId);
+      if (success) {
+        const staffName = selectedFaculty?.name || 'Faculty member';
+        toast.success(`"${staffName}" assigned to ${subject.name}.`);
+        onClose();
+      } else {
+        toast.error('Could not save faculty allocation. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('Mutation error assigning faculty:', err);
+      toast.error(err.message || 'Failed to save allocation to database.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // 3. Remove Allocation with try/catch, loading spinner, and UI toast
   const handleRemove = async () => {
+    if (!subject || isSubmitting) return;
+
     setIsSubmitting(true);
-    const success = await onUnallocate(subject.id);
-    setIsSubmitting(false);
-    if (success) {
-      onClose();
+    try {
+      const success = await onUnallocate(subject.id);
+      if (success) {
+        toast.success(`Removed faculty assignment from ${subject.name}.`);
+        onClose();
+      } else {
+        toast.error('Could not remove faculty allocation.');
+      }
+    } catch (err: any) {
+      console.error('Mutation error unassigning faculty:', err);
+      toast.error(err.message || 'Failed to remove allocation.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -106,122 +166,126 @@ export default function AllocationModal({
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-600">
               <GraduationCap size={15} />
-              <span>Faculty Allocation</span>
+              <span>Faculty Allocation Desk</span>
             </div>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight">
               Assign Teacher to {subject.name}
             </h2>
             <p className="text-xs text-slate-500">
-              Class context: <span className="font-semibold text-slate-700">{activeClass?.name || 'Class'}</span>
+              Class context:{' '}
+              <span className="font-semibold text-slate-700">
+                {activeClass?.name || 'Class'}
+              </span>
             </p>
           </div>
 
           <button
             onClick={onClose}
             disabled={isSubmitting}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition disabled:opacity-50"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition disabled:opacity-50 cursor-pointer"
             aria-label="Close dialog"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Search Bar */}
-        <div className="px-6 py-3 border-b border-slate-100 bg-white">
-          <div className="relative">
-            <Search
-              size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search faculty by name, designation, or email..."
-              className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 rounded-xl border border-slate-200 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-800 placeholder-slate-400 transition"
-            />
-          </div>
-        </div>
-
-        {/* Teachers List (Scrollable) */}
-        <div className="flex-1 overflow-y-auto px-6 py-3 space-y-2 divide-y divide-slate-50">
-          {filteredTeachers.length === 0 ? (
-            <div className="py-12 text-center space-y-2">
-              <UserX size={32} className="mx-auto text-slate-300" />
-              <p className="text-sm font-medium text-slate-600">
-                No matching staff faculty found
-              </p>
-              <p className="text-xs text-slate-400">
-                Check that staff members are registered under your school in the Staff Directory.
-              </p>
+        {/* Modal Body */}
+        <div className="p-6 space-y-5 flex-1 overflow-y-auto">
+          {/* Current Allocation Alert (if already allocated) */}
+          {currentTeacherId && (
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 text-slate-600">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <span>
+                  Currently Assigned:{' '}
+                  <strong className="text-slate-900 font-semibold">
+                    {currentFaculty?.name || 'Assigned Faculty'}
+                  </strong>
+                </span>
+              </div>
+              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                Active
+              </span>
             </div>
-          ) : (
-            filteredTeachers.map((teacher, idx) => {
-              const isSelected = selectedTeacherId === teacher.id;
-              const isCurrent = currentTeacherId === teacher.id;
-              const avatarColor =
-                AVATAR_COLORS[idx % AVATAR_COLORS.length];
-              const initials =
-                teacher.name
-                  ?.split(' ')
-                  .map((n) => n[0])
-                  .slice(0, 2)
-                  .join('')
-                  .toUpperCase() || 'FC';
+          )}
 
-              return (
-                <div
-                  key={teacher.id}
-                  onClick={() => !isSubmitting && setSelectedTeacherId(teacher.id)}
-                  className={`pt-2 first:pt-0 cursor-pointer transition-all ${
-                    isSubmitting ? 'cursor-not-allowed opacity-60' : ''
-                  }`}
-                >
-                  <div
-                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
-                      isSelected
-                        ? 'border-emerald-500 bg-emerald-50/50 shadow-xs'
-                        : 'border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50/70'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shadow-inner flex-shrink-0 ${avatarColor}`}
-                      >
-                        {initials}
-                      </div>
+          {/* Faculty <select> Dropdown Section */}
+          <div className="space-y-2">
+            <label
+              htmlFor="faculty-select"
+              className="block text-xs font-bold uppercase tracking-wider text-slate-700"
+            >
+              Choose Staff Member (Role: Staff)
+            </label>
 
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-slate-900 truncate">
-                            {teacher.name}
-                          </span>
-                          {isCurrent && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                              Current
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-500 truncate">
-                          {(teacher as any).designation || 'Staff Faculty'} • {teacher.email}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Radio indicator */}
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
-                        isSelected
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'border-2 border-slate-300 text-transparent'
-                      }`}
-                    >
-                      <Check size={14} strokeWidth={3} />
-                    </div>
-                  </div>
+            {isLoadingFaculty ? (
+              <div className="flex items-center justify-center gap-2 py-4 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 font-medium animate-pulse">
+                <Loader2 size={15} className="animate-spin text-emerald-600" />
+                <span>Fetching registered faculty from directory...</span>
+              </div>
+            ) : facultyList.length === 0 ? (
+              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs space-y-1">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <AlertCircle size={14} />
+                  <span>No staff members found</span>
                 </div>
-              );
-            })
+                <p className="text-[11px] text-amber-700">
+                  Ensure teachers have registered with the <strong>staff</strong> role under your school.
+                </p>
+              </div>
+            ) : (
+              <div className="relative">
+                <select
+                  id="faculty-select"
+                  value={selectedTeacherId || ''}
+                  onChange={(e) => setSelectedTeacherId(e.target.value || null)}
+                  disabled={isSubmitting}
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-slate-50 hover:bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 transition font-medium cursor-pointer disabled:opacity-50"
+                >
+                  <option value="">-- Select a faculty member --</option>
+                  {facultyList.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name} ({f.email || 'No email'}) {f.designation ? `• ${f.designation}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <p className="text-[11px] text-slate-400">
+              Only faculty members with the Staff role in your institution are eligible for curriculum allocation.
+            </p>
+          </div>
+
+          {/* Selected Faculty Profile Preview Card */}
+          {selectedFaculty && (
+            <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 space-y-2 animate-in fade-in duration-150">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shadow-xs shrink-0">
+                  {selectedFaculty.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-slate-900 truncate">
+                      {selectedFaculty.name}
+                    </h4>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      Staff
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-mono truncate">
+                    {selectedFaculty.email || 'faculty@school.edu'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-emerald-200/60 flex items-center justify-between text-[11px] text-emerald-800 font-medium">
+                <span>Designation: {selectedFaculty.designation || 'Teacher'}</span>
+                <span className="flex items-center gap-1 text-emerald-700">
+                  <ShieldCheck size={13} />
+                  <span>Authorized Teacher</span>
+                </span>
+              </div>
+            </div>
           )}
         </div>
 
@@ -232,7 +296,7 @@ export default function AllocationModal({
               type="button"
               onClick={handleRemove}
               disabled={isSubmitting}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl border border-rose-200 transition disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl border border-rose-200 transition disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -252,7 +316,7 @@ export default function AllocationModal({
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition disabled:opacity-50"
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
@@ -260,13 +324,17 @@ export default function AllocationModal({
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={!selectedTeacherId || isSubmitting || selectedTeacherId === currentTeacherId}
-              className="inline-flex items-center gap-2 px-5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-sm hover:shadow transition disabled:opacity-50 disabled:pointer-events-none"
+              disabled={
+                !selectedTeacherId ||
+                isSubmitting ||
+                selectedTeacherId === currentTeacherId
+              }
+              className="inline-flex items-center gap-2 px-5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-xs transition disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
             >
               {isSubmitting ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  <span>Assigning...</span>
+                  <span>Saving Allocation...</span>
                 </>
               ) : (
                 <>
