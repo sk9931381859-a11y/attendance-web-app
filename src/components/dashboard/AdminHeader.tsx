@@ -60,40 +60,41 @@ export default function AdminHeader({
   return (
     <header className="h-16 border-b border-slate-200 bg-white px-4 sm:px-8 flex items-center justify-between sticky top-0 z-20 select-none">
       {/* Left: Mobile Toggle + Context Title */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 mr-2 sm:mr-4">
         {onOpenMobileMenu && (
           <button
             onClick={onOpenMobileMenu}
-            className="md:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition"
+            className="md:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition shrink-0"
             aria-label="Open navigation menu"
           >
             <Menu size={20} />
           </button>
         )}
 
-        <div>
-          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-tight">
+        <div className="min-w-0">
+          <h2 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 tracking-tight leading-tight truncate">
             Principal&apos;s Dashboard
           </h2>
-          <p className="text-[11px] text-slate-500 hidden sm:block">
+          <p className="text-[11px] text-slate-500 hidden sm:block truncate">
             {schoolName || 'Apex Global Academy'} &bull; Real-time Oversight
           </p>
         </div>
       </div>
 
       {/* Right: Launch Scanner Kiosk Button + Principal Profile Dropdown */}
-      <div className="flex items-center gap-3 sm:gap-4">
-        {/* Prominent "Launch Scanner Kiosk" button */}
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+        {/* Responsive "Launch Scanner Kiosk" button: icon-only on mobile, compact on tablet, full on desktop */}
         <a
           href="/kiosk"
           target="_blank"
           rel="noopener noreferrer"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md px-4 py-2 inline-flex items-center gap-2 text-sm shadow-xs transition active:scale-95 group"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg p-2 sm:px-3 sm:py-2 md:px-3.5 md:py-2 inline-flex items-center gap-1.5 md:gap-2 text-xs md:text-sm shadow-xs transition active:scale-95 group shrink-0"
           title="Open Headless Scanner Kiosk in New Tab"
         >
-          <QrCode size={16} className="group-hover:scale-110 transition-transform" />
-          <span>Launch Scanner Kiosk</span>
-          <ExternalLink size={13} className="text-indigo-200 opacity-80" />
+          <QrCode size={16} className="group-hover:scale-110 transition-transform shrink-0" />
+          <span className="hidden md:inline">Launch Scanner Kiosk</span>
+          <span className="hidden sm:inline md:hidden">Kiosk</span>
+          <ExternalLink size={13} className="text-indigo-200 opacity-80 shrink-0 hidden md:inline" />
         </a>
 
         {/* Principal Profile Dropdown */}

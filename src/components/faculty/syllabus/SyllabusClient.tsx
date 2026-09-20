@@ -208,6 +208,9 @@ export default function SyllabusClient({
 
           const term1Chapters = alloc.chapters.filter((c) => c.term === 'Term 1');
           const term2Chapters = alloc.chapters.filter((c) => c.term === 'Term 2');
+          const otherChapters = alloc.chapters.filter(
+            (c) => c.term !== 'Term 1' && c.term !== 'Term 2'
+          );
 
           return (
             <div
@@ -266,14 +269,27 @@ export default function SyllabusClient({
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium">
                     <span>
-                      {alloc.chapters.length} Total Chapters ({term1Chapters.length} Term 1 &bull; {term2Chapters.length} Term 2)
+                      {alloc.chapters.length} Total Chapters
+                      {term1Chapters.length > 0 || term2Chapters.length > 0 || otherChapters.length > 0 ? (
+                        <>
+                          {' '}(
+                          {[
+                            term1Chapters.length > 0 ? `${term1Chapters.length} Term 1` : null,
+                            term2Chapters.length > 0 ? `${term2Chapters.length} Term 2` : null,
+                            otherChapters.length > 0 ? `${otherChapters.length} General` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' • ')}
+                          )
+                        </>
+                      ) : null}
                     </span>
                     <span>{percent === 100 ? '🎉 Curriculum Completed' : `${percent}% Done`}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Accordion Content: Chapter List Divided by Term 1 & Term 2 */}
+              {/* Accordion Content: Chapter List Divided by Term 1, Term 2, and General */}
               {isExpanded && (
                 <div className="px-5 sm:px-6 pb-6 pt-2 border-t border-slate-100 space-y-6 bg-slate-50/30">
                   {alloc.chapters.length === 0 ? (
@@ -336,7 +352,41 @@ export default function SyllabusClient({
                               <ChapterRow
                                 key={chap.id}
                                 chapter={chap}
-                                index={idx + 1}
+                                index={term1Chapters.length + idx + 1}
+                                allocationId={alloc.id}
+                                progress={progressMap[chap.id] || {}}
+                                percent={getChapterProgressPercent(chap.id)}
+                                pendingToggles={pendingToggles}
+                                onToggle={(field) =>
+                                  handleToggle(alloc.id, chap.id, field)
+                                }
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Other / General Chapters Section */}
+                      {otherChapters.length > 0 && (
+                        <div className="space-y-3 pt-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-slate-600" />
+                              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                                Additional Chapters
+                              </h3>
+                            </div>
+                            <span className="text-[11px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                              {otherChapters.length} Chapters
+                            </span>
+                          </div>
+
+                          <div className="space-y-2.5">
+                            {otherChapters.map((chap, idx) => (
+                              <ChapterRow
+                                key={chap.id}
+                                chapter={chap}
+                                index={term1Chapters.length + term2Chapters.length + idx + 1}
                                 allocationId={alloc.id}
                                 progress={progressMap[chap.id] || {}}
                                 percent={getChapterProgressPercent(chap.id)}

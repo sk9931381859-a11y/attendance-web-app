@@ -63,9 +63,31 @@ export async function getTeacherSyllabusData(): Promise<TeacherSyllabusData> {
   // 2. Query teacher_allocations for this teacher (supporting both teacher_id and staff_id)
   const { data: rawAllocations, error: allocError } = await supabase
     .from('teacher_allocations')
-    .select(
-      'id, school_id, teacher_id, staff_id, subject_id, academic_subjects(id, name, class_id, academic_classes(id, name))'
-    )
+    .select(`
+      id,
+      school_id,
+      teacher_id,
+      staff_id,
+      subject_id,
+      academic_subjects (
+        id,
+        name,
+        class_id,
+        academic_classes (
+          id,
+          name
+        ),
+        chapters (
+          id,
+          school_id,
+          subject_id,
+          name,
+          term,
+          order_index,
+          created_at
+        )
+      )
+    `)
     .or(`teacher_id.eq.${user.id},staff_id.eq.${user.id}`);
 
   if (allocError) {
@@ -73,15 +95,18 @@ export async function getTeacherSyllabusData(): Promise<TeacherSyllabusData> {
     throw new Error('Failed to fetch allocations.');
   }
 
-  const validAllocations = (rawAllocations || []).filter(
-    (a) => (a as any).academic_subjects?.name
-  );
+  const validAllocations = (rawAllocations || []).filter((a) => {
+    const subj = Array.isArray(a.academic_subjects)
+      ? a.academic_subjects[0]
+      : a.academic_subjects;
+    return Boolean(subj?.name);
+  });
 
   const subjectIds = Array.from(new Set(validAllocations.map((a) => a.subject_id)));
   const allocationIds = validAllocations.map((a) => a.id);
 
-  // 3. Fetch all chapters for allocated subjects
-  let chaptersList: Chapter[] = [];
+  // 3. Also fetch direct query on chapters table to guarantee complete data
+  let directChaptersList: Chapter[] = [];
   if (subjectIds.length > 0) {
     const { data: chaps, error: chapsError } = await supabase
       .from('chapters')
@@ -90,9 +115,9 @@ export async function getTeacherSyllabusData(): Promise<TeacherSyllabusData> {
       .order('order_index', { ascending: true });
 
     if (chapsError) {
-      console.error('Error fetching chapters:', chapsError);
+      console.error('Error fetching chapters directly:', chapsError);
     } else {
-      chaptersList = chaps || [];
+      directChaptersList = chaps || [];
     }
   }
 
@@ -113,11 +138,34 @@ export async function getTeacherSyllabusData(): Promise<TeacherSyllabusData> {
     }
   }
 
-  // 5. Structure data into AllocationWithSyllabus
+  // 5. Structure data into AllocationWithSyllabus (merging nested & direct chapters)
   const allocations: AllocationWithSyllabus[] = validAllocations.map((a) => {
-    const subj = (a as any).academic_subjects;
-    const cls = subj?.academic_classes;
-    const subChapters = chaptersList.filter((c) => c.subject_id === a.subject_id);
+    const subj = Array.isArray(a.academic_subjects)
+      ? a.academic_subjects[0]
+      : a.academic_subjects;
+    const cls = Array.isArray(subj?.academic_classes)
+      ? subj?.academic_classes[0]
+      : subj?.academic_classes;
+
+    const nestedChapters: Chapter[] = Array.isArray(subj?.chapters)
+      ? subj.chapters
+      : [];
+    const directChapters: Chapter[] = directChaptersList.filter(
+      (c) => c.subject_id === a.subject_id
+    );
+
+    // Merge chapters by ID to eliminate any duplicate entries
+    const chapterMap = new Map<string, Chapter>();
+    for (const c of directChapters) {
+      chapterMap.set(c.id, c);
+    }
+    for (const c of nestedChapters) {
+      chapterMap.set(c.id, c);
+    }
+
+    const subChapters = Array.from(chapterMap.values()).sort(
+      (x, y) => (x.order_index || 0) - (y.order_index || 0)
+    );
 
     return {
       id: a.id,
