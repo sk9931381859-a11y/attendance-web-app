@@ -9,6 +9,7 @@ import {
   Wallet,
   GraduationCap,
   Building2,
+  BookOpen,
   X,
   ExternalLink,
   ShieldCheck,
@@ -51,6 +52,12 @@ export default function AdminSidebar({
       href: '/dashboard/payroll',
       icon: Wallet,
       isActive: pathname.startsWith('/dashboard/payroll'),
+    },
+    {
+      label: 'Academics & Syllabus',
+      href: '/dashboard/academics',
+      icon: BookOpen,
+      isActive: pathname.startsWith('/dashboard/academics'),
     },
     {
       label: 'Academic Oversight',

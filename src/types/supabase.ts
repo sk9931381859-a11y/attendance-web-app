@@ -100,35 +100,49 @@ export interface PayrollRun {
 
 export interface AcademicClass {
   id: string;
-  grade: string;
-  section: string;
+  school_id?: string;
+  name: string;
+  grade?: string | null;
+  section?: string | null;
   created_at?: string;
 }
 
 export interface AcademicSubject {
   id: string;
+  school_id?: string;
+  class_id: string;
   name: string;
   created_at?: string;
+  academic_classes?: AcademicClass | null;
+  teacher_allocations?: TeacherAllocation[] | null;
+  chapters?: Chapter[] | null;
 }
 
 export interface TeacherAllocation {
   id: string;
-  staff_id: string;
-  class_id: string;
+  school_id?: string;
+  teacher_id: string;
   subject_id: string;
-  is_class_teacher: boolean;
+  staff_id?: string;
+  class_id?: string | null;
+  is_class_teacher?: boolean;
   created_at?: string;
   profiles?: Profile | null;
+  teacher?: Profile | null;
   academic_classes?: AcademicClass | null;
   academic_subjects?: AcademicSubject | null;
 }
 
 export interface Chapter {
   id: string;
+  school_id?: string;
   subject_id: string;
-  class_id: string;
-  chapter_number: number;
-  title: string;
+  name: string;
+  term: 'Term 1' | 'Term 2';
+  order_index?: number;
+  class_id?: string | null;
+  chapter_number?: number | null;
+  title?: string;
   created_at?: string;
   academic_subjects?: AcademicSubject | null;
   academic_classes?: AcademicClass | null;
@@ -136,13 +150,18 @@ export interface Chapter {
 
 export interface ChapterProgress {
   id: string;
+  school_id?: string;
+  allocation_id?: string;
   chapter_id: string;
-  staff_id: string;
-  school_id?: string | null;
+  staff_id?: string;
   theory_completed: boolean;
   qa_completed: boolean;
   notebooks_checked: boolean;
   is_locked: boolean;
+  explained_at?: string | null;
+  exercise_discussed_at?: string | null;
+  copy_checked_at?: string | null;
+  resource_link?: string | null;
   target_completion_date?: string | null;
   locked_at?: string | null;
   created_at?: string;
