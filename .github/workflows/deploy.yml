@@ -25,7 +25,7 @@ jobs:
             source ~/.nvm/nvm.sh
             
             # NOTE FOR USER: Update the path below to match the exact directory location of your project on your Hostinger VPS
-            cd//home/u327945570/attendance-web-app
+            cd /home/u327945570/attendance-web-app
             
             git pull origin main
             npm install

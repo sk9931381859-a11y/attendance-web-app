@@ -47,9 +47,9 @@ export default function TeacherNav({ teacherName, teacherEmail, schoolName }: Te
     },
     {
       label: 'My Syllabus',
-      href: '/faculty#syllabus-section',
+      href: '/faculty/syllabus',
       icon: BookOpen,
-      isActive: false,
+      isActive: pathname.startsWith('/faculty/syllabus'),
     },
   ];
 
