@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -18,14 +19,13 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST_IP }}
-        username: ${{ secrets.HOST_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        port: 65002
+          username: ${{ secrets.HOST_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 65002
           script: |
             export NVM_DIR=~/.nvm
             source ~/.nvm/nvm.sh
             
-            # NOTE FOR USER: Update the path below to match the exact directory location of your project on your Hostinger VPS
             cd /home/u327945570/attendance-web-app
             
             git pull origin main
