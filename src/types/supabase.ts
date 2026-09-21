@@ -243,3 +243,30 @@ export interface DatabaseRPC {
     Returns: OverdueChapter[];
   };
 }
+
+// =============================================================================
+// Student Attendance Subsystem Types (Phase 1)
+// =============================================================================
+
+export interface Student {
+  id: string;
+  school_id: string;
+  class_id: string;
+  name: string;
+  roll_number: number;
+  parent_whatsapp: string;
+  created_at?: string;
+  academic_classes?: AcademicClass | null;
+}
+
+export interface StudentAttendance {
+  id: string;
+  school_id: string;
+  student_id: string;
+  date: string;
+  status: 'PRESENT' | 'ABSENT';
+  whatsapp_sent: boolean;
+  created_at?: string;
+  students?: Student | null;
+}
+

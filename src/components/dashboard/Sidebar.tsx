@@ -76,6 +76,12 @@ export default function Sidebar({
       isActive: pathname.startsWith('/dashboard/manage'),
     },
     {
+      label: 'Student Directory',
+      href: '/dashboard/students',
+      icon: Users,
+      isActive: pathname.startsWith('/dashboard/students'),
+    },
+    {
       label: 'Payroll',
       href: '/dashboard/payroll',
       icon: Wallet,
