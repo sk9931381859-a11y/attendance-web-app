@@ -350,50 +350,38 @@ export default function AcademicsMasterClient() {
     subjectId: string,
     teacherId: string
   ): Promise<boolean> => {
-    try {
-      const res = await assignFaculty(subjectId, teacherId);
+    const res = await assignFaculty(subjectId, teacherId);
 
-      if (!res.success) {
-        throw new Error(res.error || 'Failed to assign faculty.');
-      }
-
-      if (res.allocation) {
-        setAllocations((prev) => [
-          ...prev.filter((a) => a.subject_id !== subjectId),
-          res.allocation!,
-        ]);
-      }
-
-      // Re-fetch faculty list in case names updated
-      const facRes = await fetchAvailableFaculty();
-      if (facRes.success && facRes.data) {
-        setTeachers(facRes.data as any);
-      }
-
-      return true;
-    } catch (err: any) {
-      console.error('Allocate teacher error:', err);
-      toast.error(err.message || 'Failed to allocate faculty.');
-      return false;
+    if (!res.success) {
+      throw new Error(res.error || 'Failed to assign faculty.');
     }
+
+    if (res.allocation) {
+      setAllocations((prev) => [
+        ...prev.filter((a) => a.subject_id !== subjectId),
+        res.allocation!,
+      ]);
+    }
+
+    // Re-fetch faculty list in case names updated
+    const facRes = await fetchAvailableFaculty();
+    if (facRes.success && facRes.data) {
+      setTeachers(facRes.data as any);
+    }
+
+    return true;
   };
 
   // Unallocate teacher from subject via Server Action
   const handleUnallocateTeacher = async (subjectId: string): Promise<boolean> => {
-    try {
-      const res = await unassignFaculty(subjectId);
+    const res = await unassignFaculty(subjectId);
 
-      if (!res.success) {
-        throw new Error(res.error || 'Failed to unassign faculty.');
-      }
-
-      setAllocations((prev) => prev.filter((a) => a.subject_id !== subjectId));
-      return true;
-    } catch (err: any) {
-      console.error('Unallocate teacher error:', err);
-      toast.error(err.message || 'Failed to unassign faculty.');
-      return false;
+    if (!res.success) {
+      throw new Error(res.error || 'Failed to unassign faculty.');
     }
+
+    setAllocations((prev) => prev.filter((a) => a.subject_id !== subjectId));
+    return true;
   };
 
   if (isLoading) {

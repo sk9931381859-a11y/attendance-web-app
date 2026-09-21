@@ -127,7 +127,7 @@ async function verifyAdminRole() {
 
   const { data: profile, error: profError } = await adminClient
     .from('profiles')
-    .select('id, role, company_id')
+    .select('id, role, company_id, school_id')
     .eq('id', user.id)
     .single();
 
@@ -135,9 +135,10 @@ async function verifyAdminRole() {
     throw new Error('Unauthorized: Administrator role required.');
   }
 
-  const companyId = profile.company_id || '11111111-1111-1111-1111-111111111111';
+  const schoolId = profile.school_id || (user.app_metadata as any)?.school_id || '11111111-1111-1111-1111-111111111111';
+  const companyId = profile.company_id || schoolId;
 
-  return { supabase, user, profile, companyId, adminClient };
+  return { supabase, user, profile, companyId, schoolId, adminClient };
 }
 
 /**
@@ -233,7 +234,7 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
     // Query profiles to confirm the caller has role === 'admin'. If not, throw an unauthorized error.
     const { data: callerProfile, error: profileCheckError } = await supabaseAdmin
       .from('profiles')
-      .select('id, role, company_id')
+      .select('id, role, company_id, school_id')
       .eq('id', callerUser.id)
       .single();
 
@@ -241,7 +242,8 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
       throw new Error('Unauthorized: Administrator role required.');
     }
 
-    const companyId = callerProfile.company_id || '11111111-1111-1111-1111-111111111111';
+    const schoolId = callerProfile.school_id || (callerUser.app_metadata as any)?.school_id || '11111111-1111-1111-1111-111111111111';
+    const companyId = callerProfile.company_id || schoolId;
 
     // 3. Execute Transaction
     const name = data.name?.trim();
@@ -276,6 +278,7 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
         role: 'staff',
         designation,
         company_id: companyId,
+        school_id: schoolId,
       },
     });
 
@@ -307,6 +310,7 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
       salary,
       working_days,
       company_id: companyId,
+      school_id: schoolId,
     };
 
     const { data: insertedProfile, error: profileError } = await supabaseAdmin
@@ -318,6 +322,18 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
     if (profileError) {
       console.error('Failed to insert staff profile into public.profiles:', profileError);
       return { success: false, error: `Failed to create staff profile record: ${profileError.message}` };
+    }
+
+    // Ensure auth.users app_metadata is also populated for JWT claims
+    try {
+      await supabaseAdmin.auth.admin.updateUserById(newUserId, {
+        app_metadata: {
+          role: 'staff',
+          school_id: schoolId,
+        },
+      });
+    } catch (metaErr) {
+      console.warn('Could not set app_metadata for new staff:', metaErr);
     }
 
     revalidatePath('/dashboard/manage');
@@ -355,13 +371,13 @@ export async function registerStaffAction(data: RegisterStaffInput): Promise<Sta
  */
 export async function getStaffListAction(): Promise<StaffMember[]> {
   try {
-    const { companyId } = await verifyAdminRole();
+    const { companyId, schoolId } = await verifyAdminRole();
     const adminClient = getAdminClient();
 
     const { data, error } = await adminClient
       .from('profiles')
-      .select('id, name, email, role, designation, shift_start_time, shift_id, rules_override, salary, working_days, company_id, created_at')
-      .eq('company_id', companyId)
+      .select('id, name, email, role, designation, shift_start_time, shift_id, rules_override, salary, working_days, company_id, school_id, created_at')
+      .or(`school_id.eq.${schoolId},company_id.eq.${companyId}`)
       .order('name', { ascending: true });
 
     if (error) {

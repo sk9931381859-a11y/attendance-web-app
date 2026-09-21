@@ -38,6 +38,23 @@ export default function Sidebar({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Restore collapsed preference from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('admin_sidebar_collapsed');
+      if (saved !== null) {
+        setIsCollapsed(saved === 'true');
+      }
+    } catch {}
+  }, []);
+
+  const handleToggleCollapse = (collapsed: boolean) => {
+    setIsCollapsed(collapsed);
+    try {
+      localStorage.setItem('admin_sidebar_collapsed', String(collapsed));
+    } catch {}
+  };
+
   // Listen for mobile open event triggered from AdminHeader
   useEffect(() => {
     const handleOpenMobile = () => setIsMobileOpen(true);
@@ -124,7 +141,7 @@ export default function Sidebar({
                   {/* Collapse button */}
                   <button
                     type="button"
-                    onClick={() => setIsCollapsed(true)}
+                    onClick={() => handleToggleCollapse(true)}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition cursor-pointer"
                     title="Collapse sidebar"
                     aria-label="Collapse sidebar"
@@ -136,7 +153,7 @@ export default function Sidebar({
                 <div className="flex flex-col items-center justify-center gap-1 w-full">
                   <button
                     type="button"
-                    onClick={() => setIsCollapsed(false)}
+                    onClick={() => handleToggleCollapse(false)}
                     className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/80 transition cursor-pointer"
                     title="Expand sidebar"
                     aria-label="Expand sidebar"

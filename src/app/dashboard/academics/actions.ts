@@ -1,8 +1,9 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
-import { Profile, TeacherAllocation } from '@/types/supabase';
+import { TeacherAllocation } from '@/types/supabase';
 
 export interface AvailableFaculty {
   id: string;
@@ -14,8 +15,28 @@ export interface AvailableFaculty {
 }
 
 /**
+ * Service role Supabase client helper to bypass RLS for administrative actions.
+ */
+function getAdminClient() {
+  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/\/+$/, '').replace(/\/rest\/v1\/?$/, '');
+  const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+
+  if (!url || !serviceRoleKey) {
+    return null;
+  }
+
+  return createSupabaseClient(url, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
+/**
  * Fetch all available staff faculty registered under the Admin's school.
- * Strictly queries `profiles` where `role = 'staff'` and `school_id` matches the current session tenant.
+ * Queries `profiles` where `role = 'staff'` and `school_id` matches the current session tenant.
+ * Uses admin client fallback to ensure complete visibility without RLS session desynchronization.
  */
 export async function fetchAvailableFaculty(): Promise<{
   success: boolean;
@@ -35,23 +56,24 @@ export async function fetchAvailableFaculty(): Promise<{
       return { success: false, data: [], error: 'Unauthorized: Please sign in.' };
     }
 
-    // 2. Resolve admin school_id
-    const jwtSchoolId =
-      (user.app_metadata as any)?.school_id ||
-      (user.user_metadata as any)?.school_id;
+    // 2. Resolve admin school_id & company_id
+    const { data: adminProf } = await supabase
+      .from('profiles')
+      .select('id, role, school_id, company_id')
+      .eq('id', user.id)
+      .maybeSingle();
 
-    let activeSchoolId = jwtSchoolId;
-    if (!activeSchoolId) {
-      const { data: adminProf } = await supabase
-        .from('profiles')
-        .select('school_id')
-        .eq('id', user.id)
-        .maybeSingle();
-      activeSchoolId = adminProf?.school_id || '11111111-1111-1111-1111-111111111111';
-    }
+    const activeSchoolId =
+      adminProf?.school_id ||
+      (user.app_metadata as any)?.school_id ||
+      (user.user_metadata as any)?.school_id ||
+      '11111111-1111-1111-1111-111111111111';
+
+    const adminClient = getAdminClient();
+    const client = adminClient || supabase;
 
     // 3. Query profiles where role = 'staff' and school_id matches tenant
-    const { data: staffProfiles, error: staffErr } = await supabase
+    const { data: staffProfiles, error: staffErr } = await client
       .from('profiles')
       .select('id, name, email, role, designation, school_id')
       .eq('role', 'staff')
@@ -63,9 +85,25 @@ export async function fetchAvailableFaculty(): Promise<{
       return { success: false, data: [], error: staffErr.message };
     }
 
+    let finalStaff = staffProfiles || [];
+
+    // Fallback: If 0 staff found under school_id, check company_id to bridge legacy records
+    if (finalStaff.length === 0 && adminProf?.company_id) {
+      const { data: fallbackProfiles } = await client
+        .from('profiles')
+        .select('id, name, email, role, designation, school_id')
+        .eq('role', 'staff')
+        .eq('company_id', adminProf.company_id)
+        .order('name', { ascending: true });
+
+      if (fallbackProfiles && fallbackProfiles.length > 0) {
+        finalStaff = fallbackProfiles;
+      }
+    }
+
     return {
       success: true,
-      data: (staffProfiles || []) as AvailableFaculty[],
+      data: finalStaff as AvailableFaculty[],
     };
   } catch (err: any) {
     console.error('Unexpected error in fetchAvailableFaculty:', err);
@@ -114,20 +152,28 @@ export async function assignFaculty(
       return { success: false, error: 'Forbidden: Only administrators can assign faculty.' };
     }
 
+    // 3. Get subject details to verify class and tenant school_id
+    const { data: subject } = await supabase
+      .from('academic_subjects')
+      .select('id, class_id, school_id')
+      .eq('id', subjectId)
+      .maybeSingle();
+
+    if (!subject) {
+      return { success: false, error: 'Target academic subject was not found.' };
+    }
+
     const schoolId =
+      subject.school_id ||
       adminProfile?.school_id ||
       (user.app_metadata as any)?.school_id ||
       '11111111-1111-1111-1111-111111111111';
 
-    // 3. Get subject details to preserve class_id if present
-    const { data: subject } = await supabase
-      .from('academic_subjects')
-      .select('id, class_id')
-      .eq('id', subjectId)
-      .maybeSingle();
+    const adminClient = getAdminClient();
+    const mutClient = adminClient || supabase;
 
     // 4. Remove any previous allocation for this subject to prevent stale links
-    const { error: deleteErr } = await supabase
+    const { error: deleteErr } = await mutClient
       .from('teacher_allocations')
       .delete()
       .eq('subject_id', subjectId);
@@ -137,7 +183,7 @@ export async function assignFaculty(
     }
 
     // 5. Execute INSERT into teacher_allocations mapping school_id, teacher_id, subject_id, and staff_id
-    const { data: newAllocation, error: insertErr } = await supabase
+    const { data: newAllocation, error: insertErr } = await mutClient
       .from('teacher_allocations')
       .insert([
         {
@@ -145,7 +191,8 @@ export async function assignFaculty(
           teacher_id: teacherId,
           staff_id: teacherId,
           subject_id: subjectId,
-          class_id: subject?.class_id || null,
+          class_id: subject.class_id || null,
+          is_class_teacher: false,
         },
       ])
       .select()
@@ -154,6 +201,15 @@ export async function assignFaculty(
     if (insertErr) {
       console.error('Error inserting teacher allocation:', insertErr);
       return { success: false, error: insertErr.message || 'Database insert failed.' };
+    }
+
+    // Ensure teacher profile school_id is synchronized if null
+    if (adminClient) {
+      await adminClient
+        .from('profiles')
+        .update({ school_id: schoolId })
+        .eq('id', teacherId)
+        .is('school_id', null);
     }
 
     revalidatePath('/dashboard/academics');
@@ -189,7 +245,10 @@ export async function unassignFaculty(subjectId: string): Promise<{
       return { success: false, error: 'Unauthorized.' };
     }
 
-    const { error: deleteErr } = await supabase
+    const adminClient = getAdminClient();
+    const client = adminClient || supabase;
+
+    const { error: deleteErr } = await client
       .from('teacher_allocations')
       .delete()
       .eq('subject_id', subjectId);
