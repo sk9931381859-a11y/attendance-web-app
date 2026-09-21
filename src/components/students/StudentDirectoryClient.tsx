@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useTransition, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useTransition, useMemo } from 'react';
 import { toast } from 'sonner';
 import {
   Users,
@@ -52,21 +52,14 @@ export default function StudentDirectoryClient({
   // Clipboard copy state
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
 
-  // 1. Load classes if not provided initially
-  useEffect(() => {
-    if (initialClasses.length === 0) {
-      loadClasses();
-    }
-  }, [initialClasses]);
-
-  const loadClasses = async () => {
+  const loadClasses = useCallback(async () => {
     setIsLoadingClasses(true);
     try {
       const res = await fetchClasses();
       if (res.success && res.data) {
         setClasses(res.data);
-        if (res.data.length > 0 && !selectedClassId) {
-          setSelectedClassId(res.data[0].id);
+        if (res.data.length > 0) {
+          setSelectedClassId((prev) => prev || res.data![0].id);
         }
       } else if (res.error) {
         toast.error(res.error);
@@ -76,7 +69,14 @@ export default function StudentDirectoryClient({
     } finally {
       setIsLoadingClasses(false);
     }
-  };
+  }, []);
+
+  // 1. Load classes if not provided initially
+  useEffect(() => {
+    if (initialClasses.length === 0) {
+      loadClasses();
+    }
+  }, [initialClasses, loadClasses]);
 
   // 2. Load students whenever selectedClassId changes
   useEffect(() => {

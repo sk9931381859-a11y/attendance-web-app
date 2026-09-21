@@ -133,10 +133,16 @@ export default function FacultyDashboard() {
         return;
       }
 
-      // 2. Fetch notices
-      const { data: noticeData } = await supabase
+      // 2. Fetch notices scoped to this school
+      let noticeQuery = supabase
         .from('school_notices')
-        .select('*, profiles:created_by(name, designation)')
+        .select('*, profiles:created_by(name, designation)');
+
+      if (staffProfile?.school_id) {
+        noticeQuery = noticeQuery.eq('school_id', staffProfile.school_id);
+      }
+
+      const { data: noticeData } = await noticeQuery
         .order('created_at', { ascending: false });
       if (noticeData) setNotices(noticeData);
 

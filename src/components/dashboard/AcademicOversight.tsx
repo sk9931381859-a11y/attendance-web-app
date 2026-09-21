@@ -73,6 +73,7 @@ export default function AcademicOversight() {
       const supabase = createClient();
 
       // Resolve current admin profile
+      let adminProfile = currentAdmin;
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -83,14 +84,32 @@ export default function AcademicOversight() {
           .select('*')
           .eq('id', user.id)
           .maybeSingle();
-        setCurrentAdmin(profile);
+        if (profile) {
+          adminProfile = profile;
+          setCurrentAdmin((prev) =>
+            prev?.id === profile.id && prev?.school_id === profile.school_id
+              ? prev
+              : profile
+          );
+        }
       }
 
+      const activeSchoolId =
+        adminProfile?.school_id ||
+        (user?.app_metadata as any)?.school_id ||
+        null;
+
       // 1. Fetch Pending Leave Requests
-      const { data: leavesData, error: leavesErr } = await supabase
+      let leavesQuery = supabase
         .from('leave_requests')
         .select('*, profiles:staff_id(name, email, designation)')
-        .eq('status', 'pending')
+        .eq('status', 'pending');
+
+      if (activeSchoolId) {
+        leavesQuery = leavesQuery.eq('school_id', activeSchoolId);
+      }
+
+      const { data: leavesData, error: leavesErr } = await leavesQuery
         .order('applied_at', { ascending: false });
 
       if (leavesErr) {
@@ -100,9 +119,15 @@ export default function AcademicOversight() {
       }
 
       // 2. Fetch Recent Notices
-      const { data: noticesData, error: noticeErr } = await supabase
+      let noticesQuery = supabase
         .from('school_notices')
-        .select('*')
+        .select('*');
+
+      if (activeSchoolId) {
+        noticesQuery = noticesQuery.eq('school_id', activeSchoolId);
+      }
+
+      const { data: noticesData, error: noticeErr } = await noticesQuery
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -114,9 +139,15 @@ export default function AcademicOversight() {
 
       // 3. Fetch Pacing Deviations for all Staff
       setIsLoadingDeviations(true);
-      const { data: staffList, error: staffErr } = await supabase
+      let staffQuery = supabase
         .from('profiles')
-        .select('id, name, email, designation')
+        .select('id, name, email, designation');
+
+      if (activeSchoolId) {
+        staffQuery = staffQuery.eq('school_id', activeSchoolId);
+      }
+
+      const { data: staffList, error: staffErr } = await staffQuery
         .order('name', { ascending: true });
 
       if (!staffErr && staffList && staffList.length > 0) {
@@ -156,7 +187,7 @@ export default function AcademicOversight() {
       setIsLoading(false);
       setIsLoadingDeviations(false);
     }
-  }, []);
+  }, [currentAdmin]);
 
   useEffect(() => {
     loadOversightData();
@@ -215,7 +246,18 @@ export default function AcademicOversight() {
 
     try {
       const supabase = createClient();
+      let schoolId = currentAdmin?.school_id;
+      if (!schoolId) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        schoolId =
+          (user?.app_metadata as any)?.school_id ||
+          '11111111-1111-1111-1111-111111111111';
+      }
+
       const payload = {
+        school_id: schoolId,
         title: noticeTitle.trim(),
         content: noticeContent.trim(),
         priority: isUrgentPriority ? 'urgent' : 'normal',

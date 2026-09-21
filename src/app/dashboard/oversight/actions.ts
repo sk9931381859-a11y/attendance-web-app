@@ -55,7 +55,7 @@ export interface SchoolAcademicProgressData {
  * - 25% - 75%: "On Track" (Yellow/Amber)
  * - > 75%: "Nearing Completion" (Emerald/Green)
  */
-export function getPaceStatus(percent: number): { status: PaceStatus; label: string } {
+function getPaceStatus(percent: number): { status: PaceStatus; label: string } {
   if (percent < 25) {
     return { status: 'lagging', label: 'Lagging' };
   }

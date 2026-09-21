@@ -185,6 +185,7 @@ export interface LeaveRequest {
 
 export interface SchoolNotice {
   id: string;
+  school_id?: string;
   title: string;
   content: string;
   priority: 'low' | 'normal' | 'high' | 'urgent';

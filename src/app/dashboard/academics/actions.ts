@@ -203,13 +203,20 @@ export async function assignFaculty(
       return { success: false, error: insertErr.message || 'Database insert failed.' };
     }
 
-    // Ensure teacher profile school_id is synchronized if null
+    // Ensure teacher profile school_id is synchronized with this school
     if (adminClient) {
       await adminClient
         .from('profiles')
         .update({ school_id: schoolId })
-        .eq('id', teacherId)
-        .is('school_id', null);
+        .eq('id', teacherId);
+
+      try {
+        await adminClient.auth.admin.updateUserById(teacherId, {
+          app_metadata: { school_id: schoolId, role: 'staff' },
+        });
+      } catch (metaErr) {
+        console.warn('Could not sync app_metadata during faculty assignment:', metaErr);
+      }
     }
 
     revalidatePath('/dashboard/academics');
