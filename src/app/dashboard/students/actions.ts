@@ -60,11 +60,12 @@ async function resolveCurrentTenant(): Promise<{
 }
 
 /**
- * Pull all classes for the Admin's school_id to populate a class selector dropdown.
+ * Pull unique class names for the school dynamically from the students table.
+ * Also combines pre-configured classes from academic_classes so all existing classes are available in the datalist.
  */
 export async function fetchClasses(): Promise<{
   success: boolean;
-  data: AcademicClass[];
+  data: string[];
   error?: string;
 }> {
   try {
@@ -77,42 +78,64 @@ export async function fetchClasses(): Promise<{
     const adminClient = getAdminClient();
     const client = adminClient || supabase;
 
-    const { data: classes, error: classErr } = await client
+    // 1. Dynamic query extracting unique class names directly from the students table
+    const { data: studentRows, error: studentErr } = await client
+      .from('students')
+      .select('class')
+      .eq('school_id', tenant.schoolId)
+      .not('class', 'is', null)
+      .order('class', { ascending: true });
+
+    if (studentErr) {
+      console.error('Error fetching student classes:', studentErr);
+    }
+
+    // 2. Also query academic_classes so any predefined institution cohorts appear as suggestions
+    const { data: academicRows, error: academicErr } = await client
       .from('academic_classes')
-      .select('id, school_id, name, grade, section, created_at')
+      .select('name')
       .eq('school_id', tenant.schoolId)
       .order('name', { ascending: true });
 
-    if (classErr) {
-      console.error('Error in fetchClasses:', classErr);
-      return { success: false, data: [], error: classErr.message };
+    if (academicErr) {
+      console.error('Error fetching academic classes:', academicErr);
     }
+
+    const rawClasses: string[] = [
+      ...((studentRows || []).map((r: any) => r.class)),
+      ...((academicRows || []).map((r: any) => r.name)),
+    ].filter((c): c is string => Boolean(c && typeof c === 'string' && c.trim().length > 0));
+
+    // Map/filter through a Set to eliminate duplicates and sort alphabetically
+    const uniqueClasses = Array.from(new Set(rawClasses.map((c) => c.trim()))).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+    );
 
     return {
       success: true,
-      data: (classes || []) as AcademicClass[],
+      data: uniqueClasses,
     };
   } catch (err: any) {
     console.error('Unexpected error in fetchClasses:', err);
     return {
       success: false,
       data: [],
-      error: err.message || 'Failed to fetch academic classes.',
+      error: err.message || 'Failed to fetch classes.',
     };
   }
 }
 
 /**
- * Pull all students assigned to the selected class, ordered by roll_number.
+ * Pull all students assigned to the selected class name (or class_id), ordered by roll_number.
  */
-export async function fetchStudents(classId: string): Promise<{
+export async function fetchStudents(classIdentifier: string): Promise<{
   success: boolean;
   data: Student[];
   error?: string;
 }> {
   try {
-    if (!classId) {
-      return { success: false, data: [], error: 'Class ID is required.' };
+    if (!classIdentifier) {
+      return { success: false, data: [], error: 'Class identifier is required.' };
     }
 
     const supabase = createClient();
@@ -124,12 +147,21 @@ export async function fetchStudents(classId: string): Promise<{
     const adminClient = getAdminClient();
     const client = adminClient || supabase;
 
-    const { data: students, error: studentErr } = await client
+    // Support querying by class text name, or fallback by class_id if UUID
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(classIdentifier);
+
+    let query = client
       .from('students')
-      .select('id, school_id, class_id, name, roll_number, parent_whatsapp, created_at')
-      .eq('class_id', classId)
-      .eq('school_id', tenant.schoolId)
-      .order('roll_number', { ascending: true });
+      .select('id, school_id, class_id, class, name, roll_number, parent_whatsapp, created_at')
+      .eq('school_id', tenant.schoolId);
+
+    if (isUuid) {
+      query = query.or(`class_id.eq.${classIdentifier},class.eq."${classIdentifier}"`);
+    } else {
+      query = query.eq('class', classIdentifier);
+    }
+
+    const { data: students, error: studentErr } = await query.order('roll_number', { ascending: true });
 
     if (studentErr) {
       console.error('Error in fetchStudents:', studentErr);
@@ -151,11 +183,12 @@ export async function fetchStudents(classId: string): Promise<{
 }
 
 /**
- * Insert a new student into the specified class.
+ * Insert a new student with dynamic on-the-fly class creation.
+ * Accepts raw selectedClass string without pre-existing validation constraints.
  * Handles unique roll_number constraint violations gracefully.
  */
 export async function addStudent(
-  classId: string,
+  selectedClass: string,
   name: string,
   rollNumber: number,
   phone: string
@@ -165,9 +198,11 @@ export async function addStudent(
   error?: string;
 }> {
   try {
+    const trimmedClass = (selectedClass || '').trim();
     const trimmedName = (name || '').trim();
-    if (!classId) {
-      return { success: false, error: 'Please select an academic class.' };
+
+    if (!trimmedClass) {
+      return { success: false, error: 'Please enter or select a class for this student.' };
     }
     if (!trimmedName) {
       return { success: false, error: 'Student name is required.' };
@@ -200,16 +235,17 @@ export async function addStudent(
     const adminClient = getAdminClient();
     const client = adminClient || supabase;
 
-    // Verify class exists and belongs to this school
-    const { data: classRecord } = await client
+    // Check if an academic_classes row matches this class name to link class_id for backward compatibility
+    let matchedClassId: string | null = null;
+    const { data: matchedClass } = await client
       .from('academic_classes')
-      .select('id, school_id, name')
-      .eq('id', classId)
+      .select('id')
       .eq('school_id', tenant.schoolId)
+      .ilike('name', trimmedClass)
       .maybeSingle();
 
-    if (!classRecord) {
-      return { success: false, error: 'Academic class not found for this institution.' };
+    if (matchedClass) {
+      matchedClassId = matchedClass.id;
     }
 
     const { data: newStudent, error: insertErr } = await client
@@ -217,25 +253,26 @@ export async function addStudent(
       .insert([
         {
           school_id: tenant.schoolId,
-          class_id: classId,
+          class: trimmedClass,
+          class_id: matchedClassId,
           name: trimmedName,
           roll_number: parsedRoll,
           parent_whatsapp: cleanPhone,
         },
       ])
-      .select('id, school_id, class_id, name, roll_number, parent_whatsapp, created_at')
+      .select('id, school_id, class_id, class, name, roll_number, parent_whatsapp, created_at')
       .single();
 
     if (insertErr) {
       // Gracefully handle unique roll number constraint violation
       if (
         insertErr.code === '23505' ||
-        insertErr.message?.includes('uq_students_class_roll') ||
+        insertErr.message?.includes('uq_students') ||
         insertErr.message?.includes('roll_number')
       ) {
         return {
           success: false,
-          error: `Roll ${parsedRoll} already exists in ${classRecord.name || 'this class'}. Please assign a unique roll number.`,
+          error: `Roll ${parsedRoll} already exists in "${trimmedClass}". Please assign a unique roll number.`,
         };
       }
 
@@ -254,7 +291,7 @@ export async function addStudent(
 
     if (
       err.code === '23505' ||
-      err.message?.includes('uq_students_class_roll') ||
+      err.message?.includes('uq_students') ||
       err.message?.includes('roll_number')
     ) {
       return {

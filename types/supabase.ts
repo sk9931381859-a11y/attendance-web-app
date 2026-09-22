@@ -229,7 +229,8 @@ export interface DatabaseRPC {
 export interface Student {
   id: string;
   school_id: string;
-  class_id: string;
+  class_id?: string | null;
+  class?: string | null;
   name: string;
   roll_number: number;
   parent_whatsapp: string;

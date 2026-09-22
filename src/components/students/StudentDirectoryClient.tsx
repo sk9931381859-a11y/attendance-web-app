@@ -17,20 +17,20 @@ import {
   Loader2,
   BookOpen,
 } from 'lucide-react';
-import { AcademicClass, Student } from '@/types/supabase';
+import { Student } from '@/types/supabase';
 import { fetchClasses, fetchStudents, addStudent } from '@/app/dashboard/students/actions';
 import Link from 'next/link';
 
 interface StudentDirectoryClientProps {
-  initialClasses?: AcademicClass[];
+  initialClasses?: string[];
 }
 
 export default function StudentDirectoryClient({
   initialClasses = [],
 }: StudentDirectoryClientProps) {
-  const [classes, setClasses] = useState<AcademicClass[]>(initialClasses);
-  const [selectedClassId, setSelectedClassId] = useState<string>(
-    initialClasses.length > 0 ? initialClasses[0].id : ''
+  const [classes, setClasses] = useState<string[]>(initialClasses);
+  const [filterClass, setFilterClass] = useState<string>(
+    initialClasses.length > 0 ? initialClasses[0] : ''
   );
   const [students, setStudents] = useState<Student[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,7 +42,7 @@ export default function StudentDirectoryClient({
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalClassId, setModalClassId] = useState('');
+  const [selectedClass, setSelectedClass] = useState('');
   const [name, setName] = useState('');
   const [rollNumber, setRollNumber] = useState('');
   const [phone, setPhone] = useState('');
@@ -59,7 +59,7 @@ export default function StudentDirectoryClient({
       if (res.success && res.data) {
         setClasses(res.data);
         if (res.data.length > 0) {
-          setSelectedClassId((prev) => prev || res.data![0].id);
+          setFilterClass((prev) => prev || res.data![0]);
         }
       } else if (res.error) {
         toast.error(res.error);
@@ -78,21 +78,25 @@ export default function StudentDirectoryClient({
     }
   }, [initialClasses, loadClasses]);
 
-  // 2. Load students whenever selectedClassId changes
+  // 2. Load students whenever filterClass changes
   useEffect(() => {
-    if (selectedClassId) {
-      loadStudentsForClass(selectedClassId);
+    if (filterClass) {
+      loadStudentsForClass(filterClass);
     } else {
       setStudents([]);
     }
-  }, [selectedClassId]);
+  }, [filterClass]);
 
-  const loadStudentsForClass = async (classId: string, silent = false) => {
+  const loadStudentsForClass = async (className: string, silent = false) => {
+    if (!className) {
+      setStudents([]);
+      return;
+    }
     if (!silent) setIsLoadingStudents(true);
     else setIsRefreshing(true);
 
     try {
-      const res = await fetchStudents(classId);
+      const res = await fetchStudents(className);
       if (res.success && res.data) {
         setStudents(res.data);
       } else if (res.error) {
@@ -107,14 +111,14 @@ export default function StudentDirectoryClient({
   };
 
   const handleRefresh = () => {
-    if (selectedClassId) {
-      loadStudentsForClass(selectedClassId, true);
+    if (filterClass) {
+      loadStudentsForClass(filterClass, true);
     }
   };
 
   // 3. Open Modal helper
-  const handleOpenAddModal = (targetClassId?: string) => {
-    setModalClassId(targetClassId || selectedClassId || (classes[0]?.id ?? ''));
+  const handleOpenAddModal = (targetClass?: string) => {
+    setSelectedClass(targetClass || '');
     setName('');
     setRollNumber('');
     setPhone('');
@@ -127,9 +131,9 @@ export default function StudentDirectoryClient({
     e.preventDefault();
     setModalError(null);
 
-    const targetClass = modalClassId || selectedClassId;
+    const targetClass = selectedClass.trim();
     if (!targetClass) {
-      setModalError('Please select a class for this student.');
+      setModalError('Please enter or select a class for this student.');
       return;
     }
     if (!name.trim()) {
@@ -151,18 +155,28 @@ export default function StudentDirectoryClient({
       try {
         const res = await addStudent(targetClass, name, roll, cleanPhone);
         if (res.success && res.student) {
-          toast.success(`Student "${res.student.name}" (Roll ${res.student.roll_number}) enrolled successfully!`);
+          toast.success(`Student "${res.student.name}" (Roll ${res.student.roll_number}) enrolled in ${targetClass} successfully!`);
           setIsModalOpen(false);
 
-          // If added to current selected class, update list immediately
-          if (targetClass === selectedClassId) {
+          // If targetClass is not in classes, add dynamically
+          setClasses((prev) => {
+            if (!prev.includes(targetClass)) {
+              return [...prev, targetClass].sort((a, b) =>
+                a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+              );
+            }
+            return prev;
+          });
+
+          // If added to currently filtered class, update list immediately
+          if (targetClass === filterClass) {
             setStudents((prev) => {
               const updated = [...prev, res.student!];
               return updated.sort((a, b) => a.roll_number - b.roll_number);
             });
           } else {
-            // Switch to that class
-            setSelectedClassId(targetClass);
+            // Switch to that class in the directory filter
+            setFilterClass(targetClass);
           }
         } else {
           const errMsg = res.error || 'Failed to enroll student.';
@@ -197,8 +211,6 @@ export default function StudentDirectoryClient({
     );
   }, [students, searchQuery]);
 
-  const activeClassObj = classes.find((c) => c.id === selectedClassId);
-
   return (
     <div className="space-y-6">
       {/* ========================================================================= */}
@@ -221,8 +233,7 @@ export default function StudentDirectoryClient({
         <button
           type="button"
           onClick={() => handleOpenAddModal()}
-          disabled={classes.length === 0}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
         >
           <UserPlus size={16} />
           <span>Enroll Student</span>
@@ -244,17 +255,17 @@ export default function StudentDirectoryClient({
           <div className="relative flex-1 sm:w-64">
             <select
               id="class-selector"
-              value={selectedClassId}
-              onChange={(e) => setSelectedClassId(e.target.value)}
+              value={filterClass}
+              onChange={(e) => setFilterClass(e.target.value)}
               disabled={isLoadingClasses || classes.length === 0}
               className="w-full h-10 px-3.5 py-2 text-xs sm:text-sm font-medium bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all cursor-pointer disabled:opacity-50"
             >
               {classes.length === 0 ? (
-                <option value="">No classes found</option>
+                <option value="">No classes yet</option>
               ) : (
                 classes.map((cls) => (
-                  <option key={cls.id} value={cls.id}>
-                    {cls.name} {cls.section ? `(Sec ${cls.section})` : ''}
+                  <option key={cls} value={cls}>
+                    {cls}
                   </option>
                 ))
               )}
@@ -264,7 +275,7 @@ export default function StudentDirectoryClient({
           <button
             type="button"
             onClick={handleRefresh}
-            disabled={isLoadingStudents || isRefreshing || !selectedClassId}
+            disabled={isLoadingStudents || isRefreshing || !filterClass}
             title="Refresh Roster"
             aria-label="Refresh Roster"
             className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 border border-slate-200 transition cursor-pointer disabled:opacity-40"
@@ -310,22 +321,24 @@ export default function StudentDirectoryClient({
         </div>
       ) : classes.length === 0 ? (
         /* Zero Classes in School */
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-2xs space-y-3">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
-            <BookOpen size={24} />
+        <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center shadow-2xs space-y-4">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-teal-50 border border-teal-200 text-teal-600 flex items-center justify-center">
+            <UserPlus size={24} />
           </div>
-          <h2 className="text-base font-bold text-slate-900">No Academic Classes Found</h2>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
-            Before enrolling students, please create academic cohorts and classes in the Academics &
-            Syllabus master.
-          </p>
-          <Link
-            href="/dashboard/academics"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition"
+          <div className="max-w-md mx-auto">
+            <h2 className="text-base font-bold text-slate-900">No Student Classes Enrolled Yet</h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Start building student rosters by enrolling your first student. Classes are created dynamically on the fly!
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleOpenAddModal()}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white text-xs sm:text-sm font-semibold shadow-xs transition cursor-pointer"
           >
-            <span>Open Academics Master</span>
-            <ExternalLink size={14} />
-          </Link>
+            <UserPlus size={16} />
+            <span>Enroll First Student</span>
+          </button>
         </div>
       ) : isLoadingStudents ? (
         /* Loading Students State */
@@ -333,7 +346,7 @@ export default function StudentDirectoryClient({
           <Loader2 size={32} className="animate-spin text-teal-600 mx-auto mb-3" />
           <p className="text-sm font-semibold text-slate-700">Loading student roster...</p>
           <p className="text-xs text-slate-400 mt-1">
-            Fetching enrolled records for {activeClassObj?.name || 'selected class'}
+            Fetching enrolled records for {filterClass || 'selected class'}
           </p>
         </div>
       ) : students.length === 0 ? (
@@ -348,13 +361,13 @@ export default function StudentDirectoryClient({
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
               Start building the class roster for{' '}
-              <span className="font-semibold text-slate-700">{activeClassObj?.name}</span> by
+              <span className="font-semibold text-slate-700">{filterClass}</span> by
               adding student profiles with their roll numbers and WhatsApp contacts.
             </p>
           </div>
           <button
             type="button"
-            onClick={() => handleOpenAddModal(selectedClassId)}
+            onClick={() => handleOpenAddModal(filterClass)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white text-xs sm:text-sm font-semibold shadow-xs transition cursor-pointer"
           >
             <UserPlus size={16} />
@@ -369,7 +382,7 @@ export default function StudentDirectoryClient({
           </div>
           <h2 className="text-sm font-bold text-slate-900">No matching students found</h2>
           <p className="text-xs text-slate-500">
-            No students in {activeClassObj?.name} matched &ldquo;{searchQuery}&rdquo;.
+            No students in {filterClass} matched &ldquo;{searchQuery}&rdquo;.
           </p>
           <button
             type="button"
@@ -389,7 +402,7 @@ export default function StudentDirectoryClient({
                 Class Roster:
               </span>
               <span className="text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
-                {activeClassObj?.name}
+                {filterClass}
               </span>
             </div>
             <span className="text-xs font-semibold text-slate-500">
@@ -551,28 +564,36 @@ export default function StudentDirectoryClient({
                 </div>
               )}
 
-              {/* Class Selection */}
+              {/* Target Class Input with Datalist */}
               <div>
-                <label
-                  htmlFor="modal-class-select"
-                  className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1"
-                >
-                  Target Class <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="modal-class-select"
-                  value={modalClassId}
-                  onChange={(e) => setModalClassId(e.target.value)}
+                <div className="flex items-center justify-between mb-1">
+                  <label
+                    htmlFor="modal-class-input"
+                    className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
+                  >
+                    Target Class <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[10px] text-teal-600 font-medium">Type any class or choose existing</span>
+                </div>
+                <input
+                  id="modal-class-input"
+                  list="classes-datalist"
+                  type="text"
+                  value={selectedClass}
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                  placeholder="e.g. Class 9, Class 10..."
                   disabled={isSubmitting}
-                  className="w-full h-10 px-3 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition"
+                  className="w-full h-10 px-3.5 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition"
                   required
-                >
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.section ? `(Sec ${c.section})` : ''}
+                  autoComplete="off"
+                />
+                <datalist id="classes-datalist">
+                  {classes.map((cls) => (
+                    <option key={cls} value={cls}>
+                      {cls}
                     </option>
                   ))}
-                </select>
+                </datalist>
               </div>
 
               {/* Student Name */}
